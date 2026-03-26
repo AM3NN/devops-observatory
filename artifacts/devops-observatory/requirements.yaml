@@ -1,0 +1,12 @@
+packages:
+  "recharts": "Data visualization for APM metrics, dashboard traffic, and SLO charts"
+  "framer-motion": "Animations for dashboard cards, alerts, and page transitions"
+  "date-fns": "Formatting timestamps and calculating durations for logs and traces"
+  "clsx": "Utility for constructing className strings conditionally"
+  "tailwind-merge": "Utility to merge tailwind classes without style conflicts"
+  "@radix-ui/react-slot": "Primitive for component composition"
+
+notes:
+  - "The application uses a dark mode by default to match the 'professional DevOps monitoring' aesthetic."
+  - "All data fetching is handled via the pre-generated hooks from @workspace/api-client-react."
+  - "Polling intervals are configured per the specification: Dashboard (10s), Logs (15s), Alerts (30s)."

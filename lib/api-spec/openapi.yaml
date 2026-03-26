@@ -1,22 +1,33 @@
 openapi: 3.1.0
 info:
-  # Do not change the title, if the title changes, the import paths will be broken
   title: Api
   version: 0.1.0
-  description: API specification
+  description: DevOps Observatory - Centralized monitoring platform API
 servers:
   - url: /api
     description: Base API path
 tags:
   - name: health
     description: Health operations
+  - name: logs
+    description: Centralized log management
+  - name: apm
+    description: Application Performance Monitoring
+  - name: alerts
+    description: Intelligent alerting system
+  - name: slo
+    description: Service Level Objectives
+  - name: services
+    description: Services registry
+  - name: dashboard
+    description: Dashboard metrics
+
 paths:
   /healthz:
     get:
       operationId: healthCheck
       tags: [health]
       summary: Health check
-      description: Returns server health status
       responses:
         "200":
           description: Healthy
@@ -24,6 +35,214 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+
+  /services:
+    get:
+      operationId: getServices
+      tags: [services]
+      summary: List all registered services
+      responses:
+        "200":
+          description: List of services
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Service"
+
+  /logs:
+    get:
+      operationId: getLogs
+      tags: [logs]
+      summary: Get centralized logs
+      parameters:
+        - name: level
+          in: query
+          schema:
+            type: string
+            enum: [DEBUG, INFO, WARN, ERROR, FATAL]
+        - name: service
+          in: query
+          schema:
+            type: string
+        - name: search
+          in: query
+          schema:
+            type: string
+        - name: limit
+          in: query
+          schema:
+            type: number
+        - name: offset
+          in: query
+          schema:
+            type: number
+      responses:
+        "200":
+          description: Logs list
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LogsResponse"
+    post:
+      operationId: ingestLog
+      tags: [logs]
+      summary: Ingest a new log entry
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LogEntry"
+      responses:
+        "201":
+          description: Log ingested
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LogEntry"
+
+  /apm/metrics:
+    get:
+      operationId: getApmMetrics
+      tags: [apm]
+      summary: Get APM metrics
+      parameters:
+        - name: service
+          in: query
+          schema:
+            type: string
+        - name: from
+          in: query
+          schema:
+            type: string
+        - name: to
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: APM metrics
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ApmMetric"
+
+  /apm/traces:
+    get:
+      operationId: getTraces
+      tags: [apm]
+      summary: Get distributed traces
+      parameters:
+        - name: service
+          in: query
+          schema:
+            type: string
+        - name: limit
+          in: query
+          schema:
+            type: number
+      responses:
+        "200":
+          description: Traces list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Trace"
+
+  /alerts:
+    get:
+      operationId: getAlerts
+      tags: [alerts]
+      summary: Get all alerts
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [firing, resolved, acknowledged]
+        - name: severity
+          in: query
+          schema:
+            type: string
+            enum: [critical, warning, info]
+      responses:
+        "200":
+          description: Alerts list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Alert"
+
+  /alerts/{id}/acknowledge:
+    post:
+      operationId: acknowledgeAlert
+      tags: [alerts]
+      summary: Acknowledge an alert
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Alert acknowledged
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Alert"
+
+  /slo:
+    get:
+      operationId: getSlos
+      tags: [slo]
+      summary: Get all SLOs
+      responses:
+        "200":
+          description: SLOs list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Slo"
+
+  /dashboard/summary:
+    get:
+      operationId: getDashboardSummary
+      tags: [dashboard]
+      summary: Get dashboard summary metrics
+      responses:
+        "200":
+          description: Dashboard summary
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DashboardSummary"
+
+  /dashboard/traffic:
+    get:
+      operationId: getTrafficData
+      tags: [dashboard]
+      summary: Get traffic data for charts
+      responses:
+        "200":
+          description: Traffic data
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/TrafficDataPoint"
+
 components:
   schemas:
     HealthStatus:
@@ -34,3 +253,303 @@ components:
       required:
         - status
 
+    Service:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        environment:
+          type: string
+          enum: [production, staging, development]
+        status:
+          type: string
+          enum: [healthy, degraded, down]
+        version:
+          type: string
+        uptime:
+          type: number
+        responseTime:
+          type: number
+        errorRate:
+          type: number
+        requestsPerMin:
+          type: number
+        team:
+          type: string
+        description:
+          type: string
+      required:
+        - id
+        - name
+        - environment
+        - status
+        - version
+        - uptime
+        - responseTime
+        - errorRate
+        - requestsPerMin
+        - team
+        - description
+
+    LogEntry:
+      type: object
+      properties:
+        id:
+          type: string
+        timestamp:
+          type: string
+        level:
+          type: string
+          enum: [DEBUG, INFO, WARN, ERROR, FATAL]
+        service:
+          type: string
+        message:
+          type: string
+        traceId:
+          type: string
+        spanId:
+          type: string
+        environment:
+          type: string
+        metadata:
+          type: object
+          additionalProperties: true
+      required:
+        - id
+        - timestamp
+        - level
+        - service
+        - message
+        - environment
+
+    LogsResponse:
+      type: object
+      properties:
+        logs:
+          type: array
+          items:
+            $ref: "#/components/schemas/LogEntry"
+        total:
+          type: number
+        offset:
+          type: number
+        limit:
+          type: number
+      required:
+        - logs
+        - total
+        - offset
+        - limit
+
+    ApmMetric:
+      type: object
+      properties:
+        id:
+          type: string
+        service:
+          type: string
+        timestamp:
+          type: string
+        responseTime:
+          type: number
+        throughput:
+          type: number
+        errorRate:
+          type: number
+        cpuUsage:
+          type: number
+        memoryUsage:
+          type: number
+        activeConnections:
+          type: number
+      required:
+        - id
+        - service
+        - timestamp
+        - responseTime
+        - throughput
+        - errorRate
+        - cpuUsage
+        - memoryUsage
+        - activeConnections
+
+    Trace:
+      type: object
+      properties:
+        traceId:
+          type: string
+        spanId:
+          type: string
+        service:
+          type: string
+        operation:
+          type: string
+        duration:
+          type: number
+        status:
+          type: string
+          enum: [ok, error, timeout]
+        timestamp:
+          type: string
+        parentSpanId:
+          type: string
+        tags:
+          type: object
+          additionalProperties: true
+      required:
+        - traceId
+        - spanId
+        - service
+        - operation
+        - duration
+        - status
+        - timestamp
+
+    Alert:
+      type: object
+      properties:
+        id:
+          type: string
+        title:
+          type: string
+        description:
+          type: string
+        severity:
+          type: string
+          enum: [critical, warning, info]
+        status:
+          type: string
+          enum: [firing, resolved, acknowledged]
+        service:
+          type: string
+        firedAt:
+          type: string
+        resolvedAt:
+          type: string
+        acknowledgedAt:
+          type: string
+        acknowledgedBy:
+          type: string
+        runbook:
+          type: string
+        labels:
+          type: object
+          additionalProperties: true
+        peakLoadPeriod:
+          type: boolean
+      required:
+        - id
+        - title
+        - description
+        - severity
+        - status
+        - service
+        - firedAt
+        - peakLoadPeriod
+
+    Slo:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        service:
+          type: string
+        type:
+          type: string
+          enum: [availability, latency, error_rate, throughput]
+        target:
+          type: number
+        current:
+          type: number
+        errorBudget:
+          type: number
+        errorBudgetConsumed:
+          type: number
+        window:
+          type: string
+        status:
+          type: string
+          enum: [met, at_risk, breached]
+        responsible:
+          type: string
+        description:
+          type: string
+        burnRate:
+          type: number
+      required:
+        - id
+        - name
+        - service
+        - type
+        - target
+        - current
+        - errorBudget
+        - errorBudgetConsumed
+        - window
+        - status
+        - responsible
+        - description
+        - burnRate
+
+    DashboardSummary:
+      type: object
+      properties:
+        totalServices:
+          type: number
+        healthyServices:
+          type: number
+        degradedServices:
+          type: number
+        downServices:
+          type: number
+        activeAlerts:
+          type: number
+        criticalAlerts:
+          type: number
+        logsPerMinute:
+          type: number
+        avgResponseTime:
+          type: number
+        globalErrorRate:
+          type: number
+        slosAtRisk:
+          type: number
+        isPeakLoadPeriod:
+          type: boolean
+        peakLoadLevel:
+          type: string
+          enum: [low, medium, high, critical]
+      required:
+        - totalServices
+        - healthyServices
+        - degradedServices
+        - downServices
+        - activeAlerts
+        - criticalAlerts
+        - logsPerMinute
+        - avgResponseTime
+        - globalErrorRate
+        - slosAtRisk
+        - isPeakLoadPeriod
+        - peakLoadLevel
+
+    TrafficDataPoint:
+      type: object
+      properties:
+        time:
+          type: string
+        requests:
+          type: number
+        errors:
+          type: number
+        responseTime:
+          type: number
+      required:
+        - time
+        - requests
+        - errors
+        - responseTime

@@ -32,8 +32,15 @@ router.get("/logs", async (req, res): Promise<void> => {
 
   res.json(GetLogsResponse.parse({
     logs: logs.map(l => ({
-      ...l,
+      id: l.id,
       timestamp: l.timestamp.toISOString(),
+      level: l.level,
+      service: l.service,
+      message: l.message,
+      environment: l.environment,
+      traceId: l.traceId ?? undefined,
+      spanId: l.spanId ?? undefined,
+      metadata: l.metadata ?? undefined,
     })),
     total: countResult.length,
     offset: offsetNum,

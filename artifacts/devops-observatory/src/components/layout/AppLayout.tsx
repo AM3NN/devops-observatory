@@ -9,7 +9,8 @@ import {
   Server, 
   Target, 
   Menu,
-  BellRing
+  BellRing,
+  Plug
 } from "lucide-react";
 import { useDashboardPoll } from "@/hooks/use-dashboard";
 import { motion, AnimatePresence } from "framer-motion";
@@ -39,6 +40,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
     { href: "/alerts", label: "Alerts", icon: AlertTriangle, badge: summary?.activeAlerts },
     { href: "/slo", label: "SLOs", icon: Target, badge: summary?.slosAtRisk },
     { href: "/services", label: "Services", icon: Server },
+    { href: "/agents", label: "Agents", icon: Plug },
   ];
 
   return (

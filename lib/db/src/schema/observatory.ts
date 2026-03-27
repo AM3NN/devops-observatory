@@ -1,4 +1,4 @@
-import { pgTable, text, serial, timestamp, real, boolean, jsonb } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, integer, timestamp, real, boolean, jsonb } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 
@@ -85,6 +85,21 @@ export const slosTable = pgTable("slos", {
   burnRate: real("burn_rate").notNull(),
 });
 
+export const ingestionAgentsTable = pgTable("ingestion_agents", {
+  id: text("id").primaryKey(),
+  name: text("name").notNull(),
+  description: text("description").notNull().default(""),
+  apiKey: text("api_key").notNull().unique(),
+  status: text("status").notNull().default("active"),
+  host: text("host"),
+  language: text("language"),
+  lastSeen: timestamp("last_seen", { withTimezone: true }),
+  totalLogs: integer("total_logs").notNull().default(0),
+  totalMetrics: integer("total_metrics").notNull().default(0),
+  totalTraces: integer("total_traces").notNull().default(0),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
 export const insertLogSchema = createInsertSchema(logsTable);
 export type InsertLog = z.infer<typeof insertLogSchema>;
 export type Log = typeof logsTable.$inferSelect;
@@ -93,3 +108,4 @@ export type Alert = typeof alertsTable.$inferSelect;
 export type Slo = typeof slosTable.$inferSelect;
 export type ApmMetric = typeof apmMetricsTable.$inferSelect;
 export type Trace = typeof tracesTable.$inferSelect;
+export type IngestionAgent = typeof ingestionAgentsTable.$inferSelect;

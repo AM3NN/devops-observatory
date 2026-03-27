@@ -6,6 +6,7 @@ import apmRouter from "./apm";
 import alertsRouter from "./alerts";
 import sloRouter from "./slo";
 import dashboardRouter from "./dashboard";
+import ingestRouter from "./ingest";
 
 const router: IRouter = Router();
 
@@ -16,5 +17,6 @@ router.use(apmRouter);
 router.use(alertsRouter);
 router.use(sloRouter);
 router.use(dashboardRouter);
+router.use(ingestRouter);
 
 export default router;

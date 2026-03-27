@@ -11,6 +11,7 @@ import Apm from "@/pages/Apm";
 import Alerts from "@/pages/Alerts";
 import Slo from "@/pages/Slo";
 import Services from "@/pages/Services";
+import Agents from "@/pages/Agents";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -31,6 +32,7 @@ function Router() {
         <Route path="/alerts" component={Alerts} />
         <Route path="/slo" component={Slo} />
         <Route path="/services" component={Services} />
+        <Route path="/agents" component={Agents} />
         <Route component={NotFound} />
       </Switch>
     </AppLayout>

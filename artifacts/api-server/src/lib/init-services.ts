@@ -3,39 +3,49 @@
  * Upserts the 6 monitored services into the DB on startup.
  * Does not generate fake logs or fake metrics — real data comes from the traffic generator.
  */
-import { db, servicesTable, alertsTable, slosTable } from "@workspace/db";
+import {
+  db,
+  servicesTable,
+  alertsTable,
+  slosTable,
+} from "@devops-observatory/db";
+import { eq } from "drizzle-orm";
 import { logger } from "./logger";
 import { SERVICES } from "./microservice-simulator";
+import { isDemoModeEnabled } from "./runtime-config";
 
-const SERVICE_META: Record<string, { team: string; description: string; version: string }> = {
+const SERVICE_META: Record<
+  string,
+  { team: string; description: string; version: string }
+> = {
   "svc-api-gateway": {
     team: "Platform Team",
-    description: "Point d'entrée principal — routage de toutes les requêtes client",
+    description: "Primary entry point routing all client requests",
     version: "v3.1.2",
   },
   "svc-auth": {
     team: "Security Team",
-    description: "Authentification et autorisation OAuth2 / JWT",
+    description: "OAuth2 / JWT authentication and authorization",
     version: "v2.4.0",
   },
   "svc-user": {
     team: "Core Team",
-    description: "Gestion des comptes et profils utilisateurs",
+    description: "User account and profile management",
     version: "v1.9.3",
   },
   "svc-payment": {
     team: "Finance Team",
-    description: "Traitement des paiements et intégration gateway bancaire",
+    description: "Payment processing and payment gateway integration",
     version: "v2.0.1",
   },
   "svc-notification": {
     team: "Core Team",
-    description: "Envoi d'emails, SMS et notifications push multi-canal",
+    description: "Multi-channel email, SMS, and push notifications",
     version: "v1.5.7",
   },
   "svc-analytics": {
     team: "Data Team",
-    description: "Collecte et agrégation des événements métier en temps réel",
+    description: "Real-time business event collection and aggregation",
     version: "v1.2.4",
   },
 };
@@ -43,8 +53,32 @@ const SERVICE_META: Record<string, { team: string; description: string; version:
 export async function initServices(): Promise<void> {
   logger.info("Initializing service registry...");
 
+  if (!isDemoModeEnabled()) {
+    await Promise.all(
+      SERVICES.map((svc) =>
+        db
+          .delete(servicesTable)
+          .where(eq(servicesTable.id, svc.id))
+          .catch(() => {}),
+      ),
+    );
+
+    await db.delete(alertsTable).catch(() => {});
+    await db.delete(slosTable).catch(() => {});
+
+    logger.info(
+      "Live mode enabled - waiting for external services to register through telemetry ingestion",
+    );
+
+    return;
+  }
+
   for (const svc of SERVICES) {
-    const meta = SERVICE_META[svc.id] ?? { team: "Platform Team", description: svc.name, version: "v1.0.0" };
+    const meta = SERVICE_META[svc.id] ?? {
+      team: "Platform Team",
+      description: svc.name,
+      version: "v1.0.0",
+    };
     await db
       .insert(servicesTable)
       .values({
@@ -61,7 +95,17 @@ export async function initServices(): Promise<void> {
         description: meta.description,
         updatedAt: new Date(),
       })
-      .onConflictDoNothing();
+      .onConflictDoUpdate({
+        target: servicesTable.id,
+        set: {
+          name: svc.name,
+          environment: "production",
+          version: meta.version,
+          team: meta.team,
+          description: meta.description,
+          updatedAt: new Date(),
+        },
+      });
   }
 
   // Clear old static alert/SLO seed data so the engines start fresh
@@ -70,5 +114,7 @@ export async function initServices(): Promise<void> {
   await db.delete(alertsTable).catch(() => {});
   await db.delete(slosTable).catch(() => {});
 
-  logger.info("Service registry initialized — alert and SLO engines will populate real data");
+  logger.info(
+    "Service registry initialized — alert and SLO engines will populate real data",
+  );
 }

@@ -1,7 +1,10 @@
 import { Router, type IRouter } from "express";
-import { db, alertsTable } from "@workspace/db";
+import { db, alertsTable } from "@devops-observatory/db";
 import { desc, eq, and, type SQL } from "drizzle-orm";
-import { GetAlertsResponse, AcknowledgeAlertResponse } from "@workspace/api-zod";
+import {
+  GetAlertsResponse,
+  AcknowledgeAlertResponse,
+} from "@devops-observatory/api-zod";
 
 const router: IRouter = Router();
 
@@ -16,7 +19,9 @@ function formatAlert(a: typeof alertsTable.$inferSelect) {
     firedAt: a.firedAt.toISOString(),
     peakLoadPeriod: a.peakLoadPeriod ?? false,
     ...(a.resolvedAt ? { resolvedAt: a.resolvedAt.toISOString() } : {}),
-    ...(a.acknowledgedAt ? { acknowledgedAt: a.acknowledgedAt.toISOString() } : {}),
+    ...(a.acknowledgedAt
+      ? { acknowledgedAt: a.acknowledgedAt.toISOString() }
+      : {}),
     ...(a.acknowledgedBy ? { acknowledgedBy: a.acknowledgedBy } : {}),
     ...(a.runbook ? { runbook: a.runbook } : {}),
     ...(a.labels ? { labels: a.labels as Record<string, unknown> } : {}),

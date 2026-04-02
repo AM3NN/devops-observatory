@@ -39,7 +39,12 @@ async function fetchAgents(): Promise<Agent[]> {
   return res.json();
 }
 
-async function registerAgent(data: { name: string; description: string; host: string; language: string }): Promise<Agent> {
+async function registerAgent(data: {
+  name: string;
+  description: string;
+  host: string;
+  language: string;
+}): Promise<Agent> {
   const res = await fetch(`${API_BASE}/ingest/agents`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -57,8 +62,15 @@ function CopyButton({ text }: { text: string }) {
     setTimeout(() => setCopied(false), 2000);
   };
   return (
-    <button onClick={copy} className="p-1.5 rounded hover:bg-white/10 transition-colors text-slate-400 hover:text-slate-200">
-      {copied ? <Check className="w-4 h-4 text-green-400" /> : <Copy className="w-4 h-4" />}
+    <button
+      onClick={copy}
+      className="p-1.5 rounded hover:bg-white/10 transition-colors text-slate-400 hover:text-slate-200"
+    >
+      {copied ? (
+        <Check className="w-4 h-4 text-green-400" />
+      ) : (
+        <Copy className="w-4 h-4" />
+      )}
     </button>
   );
 }
@@ -96,27 +108,48 @@ function AgentCard({ agent }: { agent: Agent }) {
           </div>
           <div>
             <h3 className="font-semibold text-slate-200">{agent.name}</h3>
-            <p className="text-xs text-slate-500">{agent.description || "Aucune description"}</p>
+            <p className="text-xs text-slate-500">
+              {agent.description || "Aucune description"}
+            </p>
           </div>
         </div>
-        <span className={`flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full font-medium ${
-          isRecent
-            ? "bg-green-500/10 text-green-400 border border-green-500/20"
-            : "bg-slate-500/10 text-slate-400 border border-slate-500/20"
-        }`}>
-          <span className={`w-1.5 h-1.5 rounded-full ${isRecent ? "bg-green-400 animate-pulse" : "bg-slate-500"}`} />
-          {isRecent ? "Actif" : "Inactif"}
+        <span
+          className={`flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full font-medium ${
+            isRecent
+              ? "bg-green-500/10 text-green-400 border border-green-500/20"
+              : "bg-slate-500/10 text-slate-400 border border-slate-500/20"
+          }`}
+        >
+          <span
+            className={`w-1.5 h-1.5 rounded-full ${isRecent ? "bg-green-400 animate-pulse" : "bg-slate-500"}`}
+          />
+          {isRecent ? "Active" : "Inactive"}
         </span>
       </div>
 
       {/* Stats */}
       <div className="grid grid-cols-3 gap-2 mb-4">
         {[
-          { icon: FileText, label: "Logs", value: agent.totalLogs.toLocaleString() },
-          { icon: BarChart2, label: "Métriques", value: agent.totalMetrics.toLocaleString() },
-          { icon: GitBranch, label: "Traces", value: agent.totalTraces.toLocaleString() },
+          {
+            icon: FileText,
+            label: "Logs",
+            value: agent.totalLogs.toLocaleString(),
+          },
+          {
+            icon: BarChart2,
+            label: "Metrics",
+            value: agent.totalMetrics.toLocaleString(),
+          },
+          {
+            icon: GitBranch,
+            label: "Traces",
+            value: agent.totalTraces.toLocaleString(),
+          },
         ].map(({ icon: Icon, label, value }) => (
-          <div key={label} className="bg-background/50 rounded-xl p-3 text-center">
+          <div
+            key={label}
+            className="bg-background/50 rounded-xl p-3 text-center"
+          >
             <Icon className="w-3.5 h-3.5 text-slate-500 mx-auto mb-1" />
             <p className="text-sm font-bold text-slate-200">{value}</p>
             <p className="text-xs text-slate-500">{label}</p>
@@ -133,13 +166,15 @@ function AgentCard({ agent }: { agent: Agent }) {
               onClick={() => setShowKey(!showKey)}
               className="text-xs text-primary hover:underline"
             >
-              {showKey ? "Masquer" : "Afficher"}
+              {showKey ? "Hide" : "Show"}
             </button>
             <CopyButton text={agent.apiKey} />
           </div>
         </div>
         <p className="text-xs font-mono text-slate-300 truncate">
-          {showKey ? agent.apiKey : "•".repeat(Math.min(agent.apiKey.length, 32))}
+          {showKey
+            ? agent.apiKey
+            : "•".repeat(Math.min(agent.apiKey.length, 32))}
         </p>
       </div>
 
@@ -150,7 +185,10 @@ function AgentCard({ agent }: { agent: Agent }) {
         {agent.lastSeen && (
           <span className="ml-auto flex items-center gap-1">
             <Clock className="w-3 h-3" />
-            {new Date(agent.lastSeen).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}
+            {new Date(agent.lastSeen).toLocaleTimeString("en-US", {
+              hour: "2-digit",
+              minute: "2-digit",
+            })}
           </span>
         )}
       </div>
@@ -158,8 +196,19 @@ function AgentCard({ agent }: { agent: Agent }) {
   );
 }
 
-function RegisterModal({ onClose, onSuccess }: { onClose: () => void; onSuccess: (agent: Agent) => void }) {
-  const [form, setForm] = useState({ name: "", description: "", host: "", language: "Node.js" });
+function RegisterModal({
+  onClose,
+  onSuccess,
+}: {
+  onClose: () => void;
+  onSuccess: (agent: Agent) => void;
+}) {
+  const [form, setForm] = useState({
+    name: "",
+    description: "",
+    host: "",
+    language: "Node.js",
+  });
   const mutation = useMutation({ mutationFn: registerAgent, onSuccess });
 
   return (
@@ -169,17 +218,33 @@ function RegisterModal({ onClose, onSuccess }: { onClose: () => void; onSuccess:
         animate={{ opacity: 1, scale: 1 }}
         className="bg-card border border-white/10 rounded-2xl p-6 w-full max-w-md"
       >
-        <h2 className="text-lg font-semibold text-slate-100 mb-1">Nouvel agent</h2>
-        <p className="text-sm text-slate-500 mb-5">Une clé API unique sera générée automatiquement.</p>
+        <h2 className="text-lg font-semibold text-slate-100 mb-1">New agent</h2>
+        <p className="text-sm text-slate-500 mb-5">
+          A unique API key will be generated automatically.
+        </p>
 
         <div className="space-y-4">
           {[
-            { key: "name", label: "Nom du service *", placeholder: "ex: mon-api-node" },
-            { key: "description", label: "Description", placeholder: "ex: API backend de production" },
-            { key: "host", label: "Hôte / IP", placeholder: "ex: 192.168.1.10 ou mon-serveur.com" },
+            {
+              key: "name",
+              label: "Service name *",
+              placeholder: "e.g. my-node-api",
+            },
+            {
+              key: "description",
+              label: "Description",
+              placeholder: "e.g. production backend API",
+            },
+            {
+              key: "host",
+              label: "Host / IP",
+              placeholder: "e.g. 192.168.1.10 or my-server.com",
+            },
           ].map(({ key, label, placeholder }) => (
             <div key={key}>
-              <label className="text-xs text-slate-400 font-medium mb-1.5 block">{label}</label>
+              <label className="text-xs text-slate-400 font-medium mb-1.5 block">
+                {label}
+              </label>
               <input
                 type="text"
                 value={form[key as keyof typeof form]}
@@ -190,14 +255,28 @@ function RegisterModal({ onClose, onSuccess }: { onClose: () => void; onSuccess:
             </div>
           ))}
           <div>
-            <label className="text-xs text-slate-400 font-medium mb-1.5 block">Langage</label>
+            <label className="text-xs text-slate-400 font-medium mb-1.5 block">
+              Language
+            </label>
             <select
               value={form.language}
               onChange={(e) => setForm({ ...form, language: e.target.value })}
               className="w-full bg-background/70 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-slate-200 focus:outline-none focus:border-primary/40"
             >
-              {["Node.js", "Python", "Java", "Go", "PHP", "Ruby", "Rust", "C#", "Autre"].map((l) => (
-                <option key={l} value={l}>{l}</option>
+              {[
+                "Node.js",
+                "Python",
+                "Java",
+                "Go",
+                "PHP",
+                "Ruby",
+                "Rust",
+                "C#",
+                "Other",
+              ].map((l) => (
+                <option key={l} value={l}>
+                  {l}
+                </option>
               ))}
             </select>
           </div>
@@ -208,14 +287,14 @@ function RegisterModal({ onClose, onSuccess }: { onClose: () => void; onSuccess:
             onClick={onClose}
             className="flex-1 py-2.5 rounded-xl border border-white/10 text-sm text-slate-400 hover:bg-white/5 transition"
           >
-            Annuler
+            Cancel
           </button>
           <button
             onClick={() => mutation.mutate(form)}
             disabled={!form.name || mutation.isPending}
             className="flex-1 py-2.5 rounded-xl bg-primary text-white text-sm font-medium hover:bg-primary/90 transition disabled:opacity-40"
           >
-            {mutation.isPending ? "Création..." : "Créer l'agent"}
+            {mutation.isPending ? "Creating..." : "Create agent"}
           </button>
         </div>
       </motion.div>
@@ -231,7 +310,7 @@ const fetch = require('node-fetch');
 const OBSERVATORY_URL = '${typeof window !== "undefined" ? window.location.origin : ""}/api';
 const API_KEY = '${DEMO_KEY}';
 
-// Envoyer des logs
+// Send logs
 await fetch(\`\${OBSERVATORY_URL}/ingest/logs\`, {
   method: 'POST',
   headers: {
@@ -242,36 +321,36 @@ await fetch(\`\${OBSERVATORY_URL}/ingest/logs\`, {
     logs: [
       {
         level: 'INFO',
-        service: 'mon-service',
-        message: 'Utilisateur connecté avec succès',
+        service: 'my-service',
+        message: 'User logged in successfully',
         environment: 'production',
         metadata: { userId: '123', ip: '10.0.0.1' }
       },
       {
         level: 'ERROR',
-        service: 'mon-service',
-        message: 'Connexion DB échouée: timeout après 5s',
+        service: 'my-service',
+        message: 'DB connection failed: timeout after 5s',
         environment: 'production'
       }
     ]
   })
 });`;
 
-const curlExample = `# Envoyer un log simple
+const curlExample = `# Send a single log entry
 curl -X POST /api/ingest/logs \\
   -H "Content-Type: application/json" \\
   -H "X-API-Key: ${DEMO_KEY}" \\
   -d '{
     "logs": [{
       "level": "ERROR",
-      "service": "mon-api",
-      "message": "Timeout connexion base de données",
+      "service": "my-api",
+      "message": "Database connection timeout",
       "environment": "production",
       "metadata": { "db": "postgres", "timeout": 5000 }
     }]
   }'
 
-# Envoyer des métriques APM
+# Send APM metrics
 curl -X POST /api/ingest/metrics \\
   -H "Content-Type: application/json" \\
   -H "X-API-Key: ${DEMO_KEY}" \\
@@ -295,13 +374,13 @@ headers = {
     "X-API-Key": API_KEY
 }
 
-# Envoyer des logs
+# Send logs
 requests.post(f"{OBSERVATORY_URL}/ingest/logs", headers=headers, json={
     "logs": [
         {
             "level": "WARN",
-            "service": "mon-service-python",
-            "message": "Mémoire heap proche du maximum: 87%",
+            "service": "my-python-service",
+            "message": "Heap memory nearing maximum: 87%",
             "environment": "production",
             "metadata": {"heap_mb": 1740, "max_mb": 2000}
         }
@@ -313,7 +392,7 @@ requests.post(f"{OBSERVATORY_URL}/ingest/traces", headers=headers, json={
     "spans": [{
         "traceId": "abc123",
         "spanId": "span001",
-        "service": "mon-service-python",
+            "service": "my-python-service",
         "operation": "processOrder",
         "duration": 345,
         "status": "ok",
@@ -324,10 +403,16 @@ requests.post(f"{OBSERVATORY_URL}/ingest/traces", headers=headers, json={
 export default function Agents() {
   const queryClient = useQueryClient();
   const [showRegister, setShowRegister] = useState(false);
-  const [activeTab, setActiveTab] = useState<"node" | "curl" | "python">("curl");
+  const [activeTab, setActiveTab] = useState<"node" | "curl" | "python">(
+    "curl",
+  );
   const [newAgent, setNewAgent] = useState<Agent | null>(null);
 
-  const { data: agents = [], isLoading, refetch } = useQuery({
+  const {
+    data: agents = [],
+    isLoading,
+    refetch,
+  } = useQuery({
     queryKey: ["agents"],
     queryFn: fetchAgents,
     refetchInterval: 30_000,
@@ -339,7 +424,11 @@ export default function Agents() {
     queryClient.invalidateQueries({ queryKey: ["agents"] });
   };
 
-  const codeExamples = { node: nodeExample, curl: curlExample, python: pythonExample };
+  const codeExamples = {
+    node: nodeExample,
+    curl: curlExample,
+    python: pythonExample,
+  };
   const tabLabels = { node: "Node.js", curl: "cURL", python: "Python" };
 
   return (
@@ -347,9 +436,12 @@ export default function Agents() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-slate-100 font-display">Agents d'Ingestion</h1>
+          <h1 className="text-2xl font-bold text-slate-100 font-display">
+            Ingestion Agents
+          </h1>
           <p className="text-slate-500 text-sm mt-1">
-            Connectez n'importe quel service externe à l'observatoire via l'API d'ingestion
+            Connect any external service to the observability platform through
+            the ingestion API
           </p>
         </div>
         <div className="flex items-center gap-3">
@@ -364,7 +456,7 @@ export default function Agents() {
             className="flex items-center gap-2 px-4 py-2.5 bg-primary text-white rounded-xl text-sm font-medium hover:bg-primary/90 transition shadow-lg shadow-primary/20"
           >
             <Plus className="w-4 h-4" />
-            Nouvel agent
+            New agent
           </button>
         </div>
       </div>
@@ -378,26 +470,66 @@ export default function Agents() {
         >
           <CheckCircle className="w-5 h-5 text-green-400 shrink-0 mt-0.5" />
           <div className="flex-1 min-w-0">
-            <p className="text-sm font-medium text-green-300">Agent « {newAgent.name} » créé avec succès</p>
-            <p className="text-xs text-slate-400 mt-1">Copiez votre clé API — elle ne sera plus affichée en clair.</p>
+            <p className="text-sm font-medium text-green-300">
+              Agent "{newAgent.name}" created successfully
+            </p>
+            <p className="text-xs text-slate-400 mt-1">
+              Copy your API key now. It will not be shown in plain text again.
+            </p>
             <div className="flex items-center gap-2 mt-2 bg-black/30 rounded-lg px-3 py-2">
-              <code className="text-xs font-mono text-green-300 flex-1">{newAgent.apiKey}</code>
+              <code className="text-xs font-mono text-green-300 flex-1">
+                {newAgent.apiKey}
+              </code>
               <CopyButton text={newAgent.apiKey} />
             </div>
           </div>
-          <button onClick={() => setNewAgent(null)} className="text-slate-500 hover:text-slate-300">✕</button>
+          <button
+            onClick={() => setNewAgent(null)}
+            className="text-slate-500 hover:text-slate-300"
+          >
+            ✕
+          </button>
         </motion.div>
       )}
 
       {/* Stats bar */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {[
-          { label: "Agents enregistrés", value: agents.length, icon: Plug, color: "text-primary" },
-          { label: "Agents actifs", value: agents.filter(a => a.lastSeen && Date.now() - new Date(a.lastSeen).getTime() < 5 * 60_000).length, icon: Activity, color: "text-green-400" },
-          { label: "Logs ingérés", value: agents.reduce((s, a) => s + a.totalLogs, 0).toLocaleString(), icon: FileText, color: "text-blue-400" },
-          { label: "Traces ingérées", value: agents.reduce((s, a) => s + a.totalTraces, 0).toLocaleString(), icon: GitBranch, color: "text-purple-400" },
+          {
+            label: "Registered agents",
+            value: agents.length,
+            icon: Plug,
+            color: "text-primary",
+          },
+          {
+            label: "Active agents",
+            value: agents.filter(
+              (a) =>
+                a.lastSeen &&
+                Date.now() - new Date(a.lastSeen).getTime() < 5 * 60_000,
+            ).length,
+            icon: Activity,
+            color: "text-green-400",
+          },
+          {
+            label: "Logs ingested",
+            value: agents.reduce((s, a) => s + a.totalLogs, 0).toLocaleString(),
+            icon: FileText,
+            color: "text-blue-400",
+          },
+          {
+            label: "Traces ingested",
+            value: agents
+              .reduce((s, a) => s + a.totalTraces, 0)
+              .toLocaleString(),
+            icon: GitBranch,
+            color: "text-purple-400",
+          },
         ].map(({ label, value, icon: Icon, color }) => (
-          <div key={label} className="bg-card/60 border border-white/5 rounded-2xl p-4">
+          <div
+            key={label}
+            className="bg-card/60 border border-white/5 rounded-2xl p-4"
+          >
             <div className="flex items-center justify-between mb-2">
               <span className="text-xs text-slate-500">{label}</span>
               <Icon className={`w-4 h-4 ${color}`} />
@@ -410,11 +542,15 @@ export default function Agents() {
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
         {/* Left: Agents list */}
         <div className="space-y-4">
-          <h2 className="text-sm font-medium text-slate-400 uppercase tracking-wider">Agents connectés</h2>
+          <h2 className="text-sm font-medium text-slate-400 uppercase tracking-wider">
+            Connected agents
+          </h2>
           {isLoading ? (
-            <div className="text-center text-slate-500 py-8">Chargement...</div>
+            <div className="text-center text-slate-500 py-8">Loading...</div>
           ) : agents.length === 0 ? (
-            <div className="text-center text-slate-500 py-8">Aucun agent enregistré</div>
+            <div className="text-center text-slate-500 py-8">
+              No agents registered
+            </div>
           ) : (
             agents.map((agent) => <AgentCard key={agent.id} agent={agent} />)
           )}
@@ -423,14 +559,18 @@ export default function Agents() {
         {/* Right: Code examples */}
         <div className="space-y-4">
           <div className="flex items-center justify-between">
-            <h2 className="text-sm font-medium text-slate-400 uppercase tracking-wider">Guide d'intégration</h2>
+            <h2 className="text-sm font-medium text-slate-400 uppercase tracking-wider">
+              Integration guide
+            </h2>
             <div className="flex gap-1 bg-background/50 rounded-xl p-1 border border-white/5">
               {(["curl", "node", "python"] as const).map((tab) => (
                 <button
                   key={tab}
                   onClick={() => setActiveTab(tab)}
                   className={`px-3 py-1.5 rounded-lg text-xs font-medium transition ${
-                    activeTab === tab ? "bg-primary text-white" : "text-slate-400 hover:text-slate-200"
+                    activeTab === tab
+                      ? "bg-primary text-white"
+                      : "text-slate-400 hover:text-slate-200"
                   }`}
                 >
                   {tabLabels[tab]}
@@ -439,45 +579,92 @@ export default function Agents() {
             </div>
           </div>
 
-          <CodeBlock code={codeExamples[activeTab]} lang={tabLabels[activeTab]} />
+          <CodeBlock
+            code={codeExamples[activeTab]}
+            lang={tabLabels[activeTab]}
+          />
 
           {/* Endpoint reference */}
           <div className="bg-card/60 border border-white/5 rounded-2xl p-5">
             <h3 className="text-sm font-semibold text-slate-300 mb-3 flex items-center gap-2">
               <Terminal className="w-4 h-4 text-primary" />
-              Référence des endpoints
+              Endpoint reference
             </h3>
             <div className="space-y-2">
               {[
-                { method: "POST", path: "/api/ingest/logs", desc: "Batch de logs (max 500/appel)" },
-                { method: "POST", path: "/api/ingest/metrics", desc: "Snapshot métriques APM" },
-                { method: "POST", path: "/api/ingest/traces", desc: "Spans distribués (max 200/appel)" },
-                { method: "POST", path: "/api/ingest/heartbeat", desc: "Signal de vie de l'agent" },
-                { method: "GET", path: "/api/ingest/agents", desc: "Liste des agents enregistrés" },
-                { method: "POST", path: "/api/ingest/agents", desc: "Enregistrer un nouvel agent" },
+                {
+                  method: "POST",
+                  path: "/api/ingest/logs",
+                  desc: "Log batch (max 500/request)",
+                },
+                {
+                  method: "POST",
+                  path: "/api/ingest/metrics",
+                  desc: "APM metrics snapshot",
+                },
+                {
+                  method: "POST",
+                  path: "/api/ingest/traces",
+                  desc: "Distributed spans (max 200/request)",
+                },
+                {
+                  method: "POST",
+                  path: "/api/ingest/heartbeat",
+                  desc: "Agent heartbeat signal",
+                },
+                {
+                  method: "GET",
+                  path: "/api/ingest/agents",
+                  desc: "Registered agents list",
+                },
+                {
+                  method: "POST",
+                  path: "/api/ingest/agents",
+                  desc: "Register a new agent",
+                },
               ].map(({ method, path, desc }) => (
-                <div key={path} className="flex items-center gap-3 py-1.5 border-b border-white/5 last:border-0">
-                  <span className={`text-xs font-mono font-bold px-2 py-0.5 rounded shrink-0 ${
-                    method === "POST" ? "bg-blue-500/15 text-blue-400" : "bg-green-500/15 text-green-400"
-                  }`}>
+                <div
+                  key={path}
+                  className="flex items-center gap-3 py-1.5 border-b border-white/5 last:border-0"
+                >
+                  <span
+                    className={`text-xs font-mono font-bold px-2 py-0.5 rounded shrink-0 ${
+                      method === "POST"
+                        ? "bg-blue-500/15 text-blue-400"
+                        : "bg-green-500/15 text-green-400"
+                    }`}
+                  >
                     {method}
                   </span>
-                  <code className="text-xs font-mono text-slate-300 shrink-0">{path}</code>
-                  <span className="text-xs text-slate-500 hidden lg:block">{desc}</span>
+                  <code className="text-xs font-mono text-slate-300 shrink-0">
+                    {path}
+                  </code>
+                  <span className="text-xs text-slate-500 hidden lg:block">
+                    {desc}
+                  </span>
                 </div>
               ))}
             </div>
             <div className="mt-4 p-3 bg-background/50 rounded-xl border border-white/5">
               <p className="text-xs text-slate-400 flex items-center gap-2">
                 <Zap className="w-3.5 h-3.5 text-yellow-400 shrink-0" />
-                Authentification : en-tête <code className="text-primary">X-API-Key: &lt;votre-clé&gt;</code> sur tous les endpoints d'ingestion
+                Authentication: send the{" "}
+                <code className="text-primary">
+                  X-API-Key: &lt;your-key&gt;
+                </code>{" "}
+                header to every ingestion endpoint
               </p>
             </div>
           </div>
         </div>
       </div>
 
-      {showRegister && <RegisterModal onClose={() => setShowRegister(false)} onSuccess={handleRegisterSuccess} />}
+      {showRegister && (
+        <RegisterModal
+          onClose={() => setShowRegister(false)}
+          onSuccess={handleRegisterSuccess}
+        />
+      )}
     </div>
   );
 }

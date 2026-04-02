@@ -12,80 +12,86 @@
  * A burn rate > 1.0 = consuming budget faster than allowed.
  */
 
-import { db, slosTable, apmMetricsTable, logsTable } from "@workspace/db";
+import {
+  db,
+  slosTable,
+  apmMetricsTable,
+  logsTable,
+} from "@devops-observatory/db";
 import { eq, and, gte, count } from "drizzle-orm";
 import { logger } from "./logger";
+import { isDemoModeEnabled } from "./runtime-config";
 
 interface SloDefinition {
   id: string;
   name: string;
   service: string;
   type: "availability" | "latency" | "error_rate" | "throughput";
-  target: number;        // e.g. 99.9 means 99.9%
-  windowMs: number;      // evaluation window in milliseconds
-  window: string;        // human-readable
+  target: number; // e.g. 99.9 means 99.9%
+  windowMs: number; // evaluation window in milliseconds
+  window: string; // human-readable
   responsible: string;
   description: string;
-  latencyThresholdMs?: number;  // for latency SLOs
-  minThroughput?: number;       // for throughput SLOs
+  latencyThresholdMs?: number; // for latency SLOs
+  minThroughput?: number; // for throughput SLOs
 }
 
 const SLO_DEFINITIONS: SloDefinition[] = [
   {
     id: "slo-001",
-    name: "API Gateway Disponibilité",
+    name: "API Gateway Availability",
     service: "svc-api-gateway",
     type: "availability",
     target: 99.9,
     windowMs: 30 * 24 * 60 * 60_000,
-    window: "30 jours",
+    window: "30 days",
     responsible: "Platform Team",
-    description: "Disponibilité globale de l'API Gateway en production",
+    description: "Overall availability of the production API Gateway",
   },
   {
     id: "slo-002",
-    name: "API Gateway Latence P95",
+    name: "API Gateway P95 Latency",
     service: "svc-api-gateway",
     type: "latency",
     target: 99.0,
     windowMs: 7 * 24 * 60 * 60_000,
-    window: "7 jours",
+    window: "7 days",
     responsible: "Platform Team",
-    description: "95% des requêtes traitées en moins de 500ms",
+    description: "95% of requests complete in under 500ms",
     latencyThresholdMs: 500,
   },
   {
     id: "slo-003",
-    name: "Auth Service Disponibilité",
+    name: "Auth Service Availability",
     service: "svc-auth",
     type: "availability",
     target: 99.99,
     windowMs: 30 * 24 * 60 * 60_000,
-    window: "30 jours",
+    window: "30 days",
     responsible: "Security Team",
-    description: "Haute disponibilité du service d'authentification",
+    description: "High availability for the authentication service",
   },
   {
     id: "slo-004",
-    name: "Payment Taux d'Erreur",
+    name: "Payment Error Rate",
     service: "svc-payment",
     type: "error_rate",
     target: 99.5,
     windowMs: 7 * 24 * 60 * 60_000,
-    window: "7 jours",
+    window: "7 days",
     responsible: "Finance Team",
-    description: "Maximum 0.5% de transactions en erreur",
+    description: "No more than 0.5% of transactions may fail",
   },
   {
     id: "slo-005",
-    name: "User Service Disponibilité",
+    name: "User Service Availability",
     service: "svc-user",
     type: "availability",
     target: 99.9,
     windowMs: 30 * 24 * 60 * 60_000,
-    window: "30 jours",
+    window: "30 days",
     responsible: "Core Team",
-    description: "Disponibilité du service utilisateurs",
+    description: "Availability of the user service",
   },
   {
     id: "slo-006",
@@ -94,12 +100,17 @@ const SLO_DEFINITIONS: SloDefinition[] = [
     type: "throughput",
     target: 95.0,
     windowMs: 7 * 24 * 60 * 60_000,
-    window: "7 jours",
+    window: "7 days",
     responsible: "Core Team",
-    description: "95% des notifications envoyées dans les 30 secondes",
+    description: "95% of notifications are delivered within 30 seconds",
     minThroughput: 10,
   },
 ];
+
+const SLO_REFRESH_MIN_INTERVAL_MS = 30_000;
+
+let lastRefreshAt = 0;
+let refreshInFlight: Promise<void> | null = null;
 
 async function computeSloValue(slo: SloDefinition): Promise<{
   current: number;
@@ -111,16 +122,25 @@ async function computeSloValue(slo: SloDefinition): Promise<{
     if (slo.type === "availability" || slo.type === "error_rate") {
       // Count total logs vs error logs for this service in the window
       const [totalRows, errorRows] = await Promise.all([
-        db.select({ count: count() }).from(logsTable).where(
-          and(eq(logsTable.service, slo.service), gte(logsTable.timestamp, since))
-        ),
-        db.select({ count: count() }).from(logsTable).where(
-          and(
-            eq(logsTable.service, slo.service),
-            gte(logsTable.timestamp, since),
-            eq(logsTable.level, "ERROR"),
-          )
-        ),
+        db
+          .select({ count: count() })
+          .from(logsTable)
+          .where(
+            and(
+              eq(logsTable.service, slo.service),
+              gte(logsTable.timestamp, since),
+            ),
+          ),
+        db
+          .select({ count: count() })
+          .from(logsTable)
+          .where(
+            and(
+              eq(logsTable.service, slo.service),
+              gte(logsTable.timestamp, since),
+              eq(logsTable.level, "ERROR"),
+            ),
+          ),
       ]);
 
       const total = totalRows[0]?.count ?? 0;
@@ -140,42 +160,58 @@ async function computeSloValue(slo: SloDefinition): Promise<{
       const burnRate = errorBudget > 0 ? actualErrorRate / errorBudget : 0;
 
       return { current, burnRate: parseFloat(burnRate.toFixed(2)) };
-
     } else if (slo.type === "latency") {
       // Use APM metrics to compute % of time response was below threshold
       const metrics = await db
         .select()
         .from(apmMetricsTable)
-        .where(and(eq(apmMetricsTable.service, slo.service), gte(apmMetricsTable.timestamp, since)));
+        .where(
+          and(
+            eq(apmMetricsTable.service, slo.service),
+            gte(apmMetricsTable.timestamp, since),
+          ),
+        );
 
       if (metrics.length === 0) {
         return { current: slo.target, burnRate: 0.1 };
       }
 
       const threshold = slo.latencyThresholdMs ?? 500;
-      const compliant = metrics.filter((m) => m.responseTime <= threshold).length;
-      const current = parseFloat(((compliant / metrics.length) * 100).toFixed(3));
+      const compliant = metrics.filter(
+        (m) => m.responseTime <= threshold,
+      ).length;
+      const current = parseFloat(
+        ((compliant / metrics.length) * 100).toFixed(3),
+      );
 
       const errorBudget = 100 - slo.target;
       const actualNonCompliance = 100 - current;
       const burnRate = errorBudget > 0 ? actualNonCompliance / errorBudget : 0;
 
       return { current, burnRate: parseFloat(burnRate.toFixed(2)) };
-
     } else {
       // throughput: check if avg throughput is above minimum
       const metrics = await db
         .select()
         .from(apmMetricsTable)
-        .where(and(eq(apmMetricsTable.service, slo.service), gte(apmMetricsTable.timestamp, since)));
+        .where(
+          and(
+            eq(apmMetricsTable.service, slo.service),
+            gte(apmMetricsTable.timestamp, since),
+          ),
+        );
 
       if (metrics.length === 0) {
         return { current: slo.target, burnRate: 0.1 };
       }
 
       const minThroughput = slo.minThroughput ?? 10;
-      const compliant = metrics.filter((m) => m.throughput >= minThroughput).length;
-      const current = parseFloat(((compliant / metrics.length) * 100).toFixed(3));
+      const compliant = metrics.filter(
+        (m) => m.throughput >= minThroughput,
+      ).length;
+      const current = parseFloat(
+        ((compliant / metrics.length) * 100).toFixed(3),
+      );
 
       const errorBudget = 100 - slo.target;
       const actualNonCompliance = 100 - current;
@@ -194,9 +230,8 @@ async function evaluateSlo(slo: SloDefinition): Promise<void> {
 
   const errorBudget = 100 - slo.target;
   const actualErrorRate = 100 - current;
-  const errorBudgetConsumed = errorBudget > 0
-    ? Math.min(100, (actualErrorRate / errorBudget) * 100)
-    : 0;
+  const errorBudgetConsumed =
+    errorBudget > 0 ? Math.min(100, (actualErrorRate / errorBudget) * 100) : 0;
 
   let status: "met" | "at_risk" | "breached" = "met";
   if (burnRate > 5 || current < slo.target - (100 - slo.target)) {
@@ -206,7 +241,10 @@ async function evaluateSlo(slo: SloDefinition): Promise<void> {
   }
 
   // Upsert the SLO record
-  const existing = await db.select().from(slosTable).where(eq(slosTable.id, slo.id));
+  const existing = await db
+    .select()
+    .from(slosTable)
+    .where(eq(slosTable.id, slo.id));
 
   if (existing.length === 0) {
     await db.insert(slosTable).values({
@@ -225,30 +263,65 @@ async function evaluateSlo(slo: SloDefinition): Promise<void> {
       burnRate,
     });
   } else {
-    await db.update(slosTable).set({
-      current,
-      errorBudgetConsumed: parseFloat(errorBudgetConsumed.toFixed(2)),
-      status,
-      burnRate,
-    }).where(eq(slosTable.id, slo.id));
+    await db
+      .update(slosTable)
+      .set({
+        current,
+        errorBudgetConsumed: parseFloat(errorBudgetConsumed.toFixed(2)),
+        status,
+        burnRate,
+      })
+      .where(eq(slosTable.id, slo.id));
   }
+}
+
+async function runAllSloEvaluations(): Promise<void> {
+  for (const slo of SLO_DEFINITIONS) {
+    await evaluateSlo(slo);
+  }
+}
+
+export async function refreshSlos(force = false): Promise<void> {
+  if (!isDemoModeEnabled()) {
+    return;
+  }
+
+  const now = Date.now();
+
+  if (!force && now - lastRefreshAt < SLO_REFRESH_MIN_INTERVAL_MS) {
+    return;
+  }
+
+  if (refreshInFlight) {
+    await refreshInFlight;
+    return;
+  }
+
+  refreshInFlight = (async () => {
+    await runAllSloEvaluations();
+    lastRefreshAt = Date.now();
+  })().finally(() => {
+    refreshInFlight = null;
+  });
+
+  await refreshInFlight;
 }
 
 /**
  * Start the SLO engine — recomputes all SLOs every 2 minutes
  */
 export function startSloEngine(): void {
+  if (!isDemoModeEnabled()) {
+    logger.info("SLO engine skipped in live mode");
+    return;
+  }
+
   logger.info("SLO engine started");
 
-  const runAll = async () => {
-    for (const slo of SLO_DEFINITIONS) {
-      await evaluateSlo(slo);
-    }
-  };
-
-  // First computation after 15 seconds
-  setTimeout(runAll, 15_000);
+  void refreshSlos(true);
 
   // Then every 2 minutes
-  setInterval(runAll, 2 * 60_000);
+  setInterval(() => {
+    void refreshSlos(true);
+  }, 2 * 60_000);
 }

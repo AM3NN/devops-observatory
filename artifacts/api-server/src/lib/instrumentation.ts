@@ -2,7 +2,12 @@
  * Instrumentation module — auto-sends logs, APM metrics and traces
  * to the observatory database for every operation performed by the microservices.
  */
-import { db, logsTable, apmMetricsTable, tracesTable } from "@workspace/db";
+import {
+  db,
+  logsTable,
+  apmMetricsTable,
+  tracesTable,
+} from "@devops-observatory/db";
 import { logger } from "./logger";
 import { randomUUID } from "crypto";
 

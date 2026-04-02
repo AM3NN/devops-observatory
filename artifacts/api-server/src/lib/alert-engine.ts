@@ -12,7 +12,13 @@
  *   - Auto-resolves when the condition clears
  */
 
-import { db, alertsTable, logsTable, apmMetricsTable, servicesTable } from "@workspace/db";
+import {
+  db,
+  alertsTable,
+  logsTable,
+  apmMetricsTable,
+  servicesTable,
+} from "@devops-observatory/db";
 import { eq, and, gte, desc, count } from "drizzle-orm";
 import { logger } from "./logger";
 import { randomUUID } from "crypto";
@@ -36,8 +42,9 @@ function isPeakHour(): boolean {
 const ALERT_RULES: AlertRule[] = [
   {
     id: "alert-001",
-    title: "Latence élevée API Gateway",
-    description: (v) => `Temps de réponse moyen: ${v.toFixed(0)}ms (seuil: 500ms) sur les 5 dernières minutes`,
+    title: "High API Gateway Latency",
+    description: (v) =>
+      `Average response time: ${v.toFixed(0)}ms (threshold: 500ms) over the last 5 minutes`,
     severity: "critical",
     service: "svc-api-gateway",
     peakLoadPeriod: true,
@@ -47,18 +54,25 @@ const ALERT_RULES: AlertRule[] = [
       const metrics = await db
         .select()
         .from(apmMetricsTable)
-        .where(and(eq(apmMetricsTable.service, "svc-api-gateway"), gte(apmMetricsTable.timestamp, since)))
+        .where(
+          and(
+            eq(apmMetricsTable.service, "svc-api-gateway"),
+            gte(apmMetricsTable.timestamp, since),
+          ),
+        )
         .orderBy(desc(apmMetricsTable.timestamp))
         .limit(5);
       if (metrics.length === 0) return { firing: false, value: 0 };
-      const avg = metrics.reduce((s, m) => s + m.responseTime, 0) / metrics.length;
+      const avg =
+        metrics.reduce((s, m) => s + m.responseTime, 0) / metrics.length;
       return { firing: avg > 500, value: avg };
     },
   },
   {
     id: "alert-002",
-    title: "Taux d'erreur Payment Service élevé",
-    description: (v) => `Taux d'erreur: ${v.toFixed(1)}% (seuil: 5%) — vérifier la connexion gateway`,
+    title: "High Payment Service Error Rate",
+    description: (v) =>
+      `Error rate: ${v.toFixed(1)}% (threshold: 5%) - check the payment gateway connection`,
     severity: "critical",
     service: "svc-payment",
     peakLoadPeriod: true,
@@ -68,7 +82,12 @@ const ALERT_RULES: AlertRule[] = [
       const metrics = await db
         .select()
         .from(apmMetricsTable)
-        .where(and(eq(apmMetricsTable.service, "svc-payment"), gte(apmMetricsTable.timestamp, since)))
+        .where(
+          and(
+            eq(apmMetricsTable.service, "svc-payment"),
+            gte(apmMetricsTable.timestamp, since),
+          ),
+        )
         .orderBy(desc(apmMetricsTable.timestamp))
         .limit(5);
       if (metrics.length === 0) return { firing: false, value: 0 };
@@ -78,8 +97,8 @@ const ALERT_RULES: AlertRule[] = [
   },
   {
     id: "alert-003",
-    title: "CPU élevé — User Service",
-    description: (v) => `Utilisation CPU: ${v.toFixed(0)}% (seuil: 85%)`,
+    title: "High CPU - User Service",
+    description: (v) => `CPU usage: ${v.toFixed(0)}% (threshold: 85%)`,
     severity: "warning",
     service: "svc-user",
     peakLoadPeriod: false,
@@ -98,8 +117,9 @@ const ALERT_RULES: AlertRule[] = [
   },
   {
     id: "alert-004",
-    title: "Taux d'erreur global élevé",
-    description: (v) => `Taux d'erreur logs (FATAL+ERROR): ${v} occurrences en 5 minutes`,
+    title: "High Global Error Rate",
+    description: (v) =>
+      `Error log rate (FATAL+ERROR): ${v} occurrences in 5 minutes`,
     severity: "warning",
     service: "svc-api-gateway",
     peakLoadPeriod: false,
@@ -110,10 +130,7 @@ const ALERT_RULES: AlertRule[] = [
         .select({ count: count() })
         .from(logsTable)
         .where(
-          and(
-            gte(logsTable.timestamp, since),
-            eq(logsTable.level, "ERROR"),
-          ),
+          and(gte(logsTable.timestamp, since), eq(logsTable.level, "ERROR")),
         );
       const errCount = rows[0]?.count ?? 0;
       return { firing: errCount > 10, value: errCount };
@@ -121,8 +138,9 @@ const ALERT_RULES: AlertRule[] = [
   },
   {
     id: "alert-005",
-    title: "Service Analytics dégradé",
-    description: (v) => `Temps de réponse Analytics: ${v.toFixed(0)}ms (seuil: 1000ms)`,
+    title: "Degraded Analytics Service",
+    description: (v) =>
+      `Analytics response time: ${v.toFixed(0)}ms (threshold: 1000ms)`,
     severity: "critical",
     service: "svc-analytics",
     peakLoadPeriod: false,
@@ -135,14 +153,16 @@ const ALERT_RULES: AlertRule[] = [
         .orderBy(desc(apmMetricsTable.timestamp))
         .limit(3);
       if (metrics.length === 0) return { firing: false, value: 0 };
-      const avg = metrics.reduce((s, m) => s + m.responseTime, 0) / metrics.length;
+      const avg =
+        metrics.reduce((s, m) => s + m.responseTime, 0) / metrics.length;
       return { firing: avg > 1000, value: avg };
     },
   },
   {
     id: "alert-006",
-    title: "Pic de charge détecté",
-    description: (_v) => `Période de montée en charge active — surveillance renforcée`,
+    title: "Peak Load Detected",
+    description: (_v) =>
+      `A peak traffic period is active - increased monitoring is enabled`,
     severity: "info",
     service: "svc-api-gateway",
     peakLoadPeriod: true,
@@ -186,30 +206,39 @@ async function evaluateRule(rule: AlertRule): Promise<void> {
 
     if (firing && !isCurrentlyFiring && !isAcknowledged) {
       // Transition: resolved → firing
-      await db.update(alertsTable).set({
-        status: "firing",
-        firedAt: new Date(),
-        resolvedAt: null,
-        acknowledgedAt: null,
-        acknowledgedBy: null,
-        description: rule.description(value),
-        peakLoadPeriod: rule.peakLoadPeriod && isPeakHour(),
-      }).where(eq(alertsTable.id, rule.id));
+      await db
+        .update(alertsTable)
+        .set({
+          status: "firing",
+          firedAt: new Date(),
+          resolvedAt: null,
+          acknowledgedAt: null,
+          acknowledgedBy: null,
+          description: rule.description(value),
+          peakLoadPeriod: rule.peakLoadPeriod && isPeakHour(),
+        })
+        .where(eq(alertsTable.id, rule.id));
 
       logger.warn({ alertId: rule.id, value }, `Alert fired: ${rule.title}`);
     } else if (!firing && isCurrentlyFiring) {
       // Transition: firing → resolved
-      await db.update(alertsTable).set({
-        status: "resolved",
-        resolvedAt: new Date(),
-      }).where(eq(alertsTable.id, rule.id));
+      await db
+        .update(alertsTable)
+        .set({
+          status: "resolved",
+          resolvedAt: new Date(),
+        })
+        .where(eq(alertsTable.id, rule.id));
 
       logger.info({ alertId: rule.id }, `Alert resolved: ${rule.title}`);
     } else if (firing && isCurrentlyFiring) {
       // Still firing — update description with latest value
-      await db.update(alertsTable).set({
-        description: rule.description(value),
-      }).where(eq(alertsTable.id, rule.id));
+      await db
+        .update(alertsTable)
+        .set({
+          description: rule.description(value),
+        })
+        .where(eq(alertsTable.id, rule.id));
     }
   } catch (err) {
     logger.error({ err, ruleId: rule.id }, "Alert rule evaluation failed");

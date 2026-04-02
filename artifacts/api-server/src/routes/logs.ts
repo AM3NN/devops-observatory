@@ -1,13 +1,20 @@
 import { Router, type IRouter } from "express";
-import { db, logsTable } from "@workspace/db";
+import { db, logsTable } from "@devops-observatory/db";
 import { desc, eq, ilike, and, type SQL } from "drizzle-orm";
-import { GetLogsResponse, IngestLogBody } from "@workspace/api-zod";
+import { GetLogsResponse, IngestLogBody } from "@devops-observatory/api-zod";
 import { randomUUID } from "crypto";
+import { ensureObservedService } from "../lib/service-registry";
 
 const router: IRouter = Router();
 
 router.get("/logs", async (req, res): Promise<void> => {
-  const { level, service, search, limit = "50", offset = "0" } = req.query as Record<string, string>;
+  const {
+    level,
+    service,
+    search,
+    limit = "50",
+    offset = "0",
+  } = req.query as Record<string, string>;
 
   const conditions: SQL[] = [];
 
@@ -30,22 +37,24 @@ router.get("/logs", async (req, res): Promise<void> => {
     db.select().from(logsTable).where(whereClause),
   ]);
 
-  res.json(GetLogsResponse.parse({
-    logs: logs.map(l => ({
-      id: l.id,
-      timestamp: l.timestamp.toISOString(),
-      level: l.level,
-      service: l.service,
-      message: l.message,
-      environment: l.environment,
-      traceId: l.traceId ?? undefined,
-      spanId: l.spanId ?? undefined,
-      metadata: l.metadata ?? undefined,
-    })),
-    total: countResult.length,
-    offset: offsetNum,
-    limit: limitNum,
-  }));
+  res.json(
+    GetLogsResponse.parse({
+      logs: logs.map((l) => ({
+        id: l.id,
+        timestamp: l.timestamp.toISOString(),
+        level: l.level,
+        service: l.service,
+        message: l.message,
+        environment: l.environment,
+        traceId: l.traceId ?? undefined,
+        spanId: l.spanId ?? undefined,
+        metadata: l.metadata ?? undefined,
+      })),
+      total: countResult.length,
+      offset: offsetNum,
+      limit: limitNum,
+    }),
+  );
 });
 
 router.post("/logs", async (req, res): Promise<void> => {
@@ -56,17 +65,26 @@ router.post("/logs", async (req, res): Promise<void> => {
   }
 
   const data = parsed.data;
-  const [log] = await db.insert(logsTable).values({
-    id: data.id ?? randomUUID(),
-    timestamp: data.timestamp ? new Date(data.timestamp) : new Date(),
-    level: data.level,
-    service: data.service,
-    message: data.message,
-    traceId: data.traceId,
-    spanId: data.spanId,
+
+  await ensureObservedService({
+    serviceId: data.service,
     environment: data.environment,
-    metadata: data.metadata ?? null,
-  }).returning();
+  });
+
+  const [log] = await db
+    .insert(logsTable)
+    .values({
+      id: data.id ?? randomUUID(),
+      timestamp: data.timestamp ? new Date(data.timestamp) : new Date(),
+      level: data.level,
+      service: data.service,
+      message: data.message,
+      traceId: data.traceId,
+      spanId: data.spanId,
+      environment: data.environment,
+      metadata: data.metadata ?? null,
+    })
+    .returning();
 
   res.status(201).json({
     ...log,

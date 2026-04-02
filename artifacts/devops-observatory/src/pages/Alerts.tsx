@@ -1,26 +1,74 @@
 import { useState } from "react";
 import { useAlertsPoll, useAckAlert } from "@/hooks/use-alerts";
-import { AlertTriangle, CheckCircle2, Info, Check, Clock, FilterX } from "lucide-react";
+import {
+  AlertTriangle,
+  CheckCircle2,
+  Info,
+  Check,
+  Clock,
+  FilterX,
+} from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { motion, AnimatePresence } from "framer-motion";
-import type { GetAlertsSeverity, GetAlertsStatus } from "@workspace/api-client-react";
+import { PageState } from "@/components/states/PageState";
+import type {
+  GetAlertsSeverity,
+  GetAlertsStatus,
+} from "@devops-observatory/api-client-react";
 
 const severityConfig = {
-  critical: { icon: AlertTriangle, color: "text-destructive", bg: "bg-destructive/10", border: "border-destructive/30", glow: "shadow-[0_0_15px_rgba(248,113,113,0.15)]" },
-  warning: { icon: AlertTriangle, color: "text-warning", bg: "bg-warning/10", border: "border-warning/30", glow: "" },
-  info: { icon: Info, color: "text-info", bg: "bg-info/10", border: "border-info/30", glow: "" }
+  critical: {
+    icon: AlertTriangle,
+    color: "text-destructive",
+    bg: "bg-destructive/10",
+    border: "border-destructive/30",
+    glow: "shadow-[0_0_15px_rgba(248,113,113,0.15)]",
+  },
+  warning: {
+    icon: AlertTriangle,
+    color: "text-warning",
+    bg: "bg-warning/10",
+    border: "border-warning/30",
+    glow: "",
+  },
+  info: {
+    icon: Info,
+    color: "text-info",
+    bg: "bg-info/10",
+    border: "border-info/30",
+    glow: "",
+  },
 };
 
 export default function Alerts() {
   const [status, setStatus] = useState<GetAlertsStatus | "all">("firing");
   const [severity, setSeverity] = useState<GetAlertsSeverity | "all">("all");
 
-  const { data: alerts, isLoading } = useAlertsPoll({
+  const {
+    data: alerts,
+    isLoading,
+    isError,
+    refetch,
+  } = useAlertsPoll({
     status: status !== "all" ? status : undefined,
-    severity: severity !== "all" ? severity : undefined
+    severity: severity !== "all" ? severity : undefined,
   });
+  const alertList = Array.isArray(alerts) ? alerts : [];
 
   const { mutate: acknowledge, isPending: isAcking } = useAckAlert();
+
+  if (isError) {
+    return (
+      <PageState
+        className="max-w-5xl"
+        icon={AlertTriangle}
+        title="Alerts are unavailable"
+        description="Alert data could not be loaded from the monitoring backend."
+        actionLabel="Retry"
+        onAction={() => void refetch()}
+      />
+    );
+  }
 
   return (
     <div className="space-y-6 max-w-5xl mx-auto h-full flex flex-col">
@@ -30,11 +78,13 @@ export default function Alerts() {
             <AlertTriangle className="w-6 h-6 mr-2 text-destructive" />
             Alert Management
           </h2>
-          <p className="text-sm text-slate-400">Respond to active incidents and anomalies</p>
+          <p className="text-sm text-slate-400">
+            Respond to active incidents and anomalies
+          </p>
         </div>
 
         <div className="flex gap-2">
-          <select 
+          <select
             className="bg-card border border-white/10 rounded-xl py-2 px-4 text-sm text-slate-200 focus:outline-none focus:border-primary shadow-sm"
             value={status}
             onChange={(e) => setStatus(e.target.value as any)}
@@ -45,7 +95,7 @@ export default function Alerts() {
             <option value="resolved">Resolved</option>
           </select>
 
-          <select 
+          <select
             className="bg-card border border-white/10 rounded-xl py-2 px-4 text-sm text-slate-200 focus:outline-none focus:border-primary shadow-sm"
             value={severity}
             onChange={(e) => setSeverity(e.target.value as any)}
@@ -66,24 +116,20 @@ export default function Alerts() {
         ) : null}
 
         <AnimatePresence>
-          {alerts?.length === 0 && !isLoading && (
-            <motion.div 
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              className="glass-panel p-12 rounded-2xl flex flex-col items-center justify-center text-center"
-            >
-              <CheckCircle2 className="w-16 h-16 text-success mb-4 opacity-50" />
-              <h3 className="text-xl font-display font-bold text-slate-200 mb-2">No active alerts</h3>
-              <p className="text-slate-400 max-w-sm">
-                Your systems are looking healthy. Enjoy the silence, or adjust your filters to see historical data.
-              </p>
+          {alertList.length === 0 && !isLoading && (
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+              <PageState
+                icon={CheckCircle2}
+                title="No active alerts"
+                description="Your systems are looking healthy. Adjust the filters to inspect other alert states."
+              />
             </motion.div>
           )}
 
-          {alerts?.map((alert, i) => {
+          {alertList.map((alert, i) => {
             const conf = severityConfig[alert.severity];
             const Icon = conf.icon;
-            
+
             return (
               <motion.div
                 key={alert.id}
@@ -94,10 +140,11 @@ export default function Alerts() {
                 className={`bg-card/80 backdrop-blur-md rounded-2xl border ${conf.border} overflow-hidden ${conf.glow} shadow-xl relative`}
               >
                 {/* Status Indicator Bar */}
-                <div className={`absolute left-0 top-0 bottom-0 w-1 ${alert.status === 'firing' ? 'bg-destructive animate-pulse' : alert.status === 'acknowledged' ? 'bg-warning' : 'bg-success'}`} />
-                
+                <div
+                  className={`absolute left-0 top-0 bottom-0 w-1 ${alert.status === "firing" ? "bg-destructive animate-pulse" : alert.status === "acknowledged" ? "bg-warning" : "bg-success"}`}
+                />
+
                 <div className="p-5 pl-7 flex flex-col md:flex-row gap-5 items-start md:items-center">
-                  
                   {/* Icon & Meta */}
                   <div className={`p-3 rounded-xl ${conf.bg} shrink-0`}>
                     <Icon className={`w-6 h-6 ${conf.color}`} />
@@ -114,7 +161,9 @@ export default function Alerts() {
                           PEAK LOAD
                         </span>
                       )}
-                      <span className={`px-2 py-0.5 rounded text-[10px] font-bold border ${alert.status === 'firing' ? 'bg-destructive/20 text-destructive border-destructive/50' : alert.status === 'acknowledged' ? 'bg-warning/20 text-warning border-warning/50' : 'bg-success/20 text-success border-success/50'}`}>
+                      <span
+                        className={`px-2 py-0.5 rounded text-[10px] font-bold border ${alert.status === "firing" ? "bg-destructive/20 text-destructive border-destructive/50" : alert.status === "acknowledged" ? "bg-warning/20 text-warning border-warning/50" : "bg-success/20 text-success border-success/50"}`}
+                      >
                         {alert.status.toUpperCase()}
                       </span>
                     </div>
@@ -130,10 +179,12 @@ export default function Alerts() {
                   <div className="shrink-0 flex flex-col items-end gap-3 w-full md:w-auto">
                     <div className="flex items-center text-xs text-slate-500 font-mono">
                       <Clock className="w-3.5 h-3.5 mr-1.5" />
-                      {formatDistanceToNow(new Date(alert.firedAt), { addSuffix: true })}
+                      {formatDistanceToNow(new Date(alert.firedAt), {
+                        addSuffix: true,
+                      })}
                     </div>
-                    
-                    {alert.status === 'firing' && (
+
+                    {alert.status === "firing" && (
                       <button
                         onClick={() => acknowledge({ id: alert.id })}
                         disabled={isAcking}
@@ -143,14 +194,16 @@ export default function Alerts() {
                         Acknowledge
                       </button>
                     )}
-                    
-                    {alert.status === 'acknowledged' && (
+
+                    {alert.status === "acknowledged" && (
                       <div className="text-xs text-slate-500 bg-background/50 px-3 py-1.5 rounded-lg border border-white/5">
-                        Ack'd by <span className="text-slate-300 font-medium">{alert.acknowledgedBy || 'System'}</span>
+                        Ack'd by{" "}
+                        <span className="text-slate-300 font-medium">
+                          {alert.acknowledgedBy || "System"}
+                        </span>
                       </div>
                     )}
                   </div>
-
                 </div>
               </motion.div>
             );

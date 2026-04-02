@@ -1,4 +1,4 @@
-# Workspace
+# DevOps Observatory Workspace
 
 ## Overview
 
@@ -20,7 +20,7 @@ pnpm workspace monorepo using TypeScript. Each package manages its own dependenc
 ## Structure
 
 ```text
-artifacts-monorepo/
+devops-observatory/
 ├── artifacts/              # Deployable applications
 │   ├── api-server/         # Express API server
 │   └── devops-observatory/ # DevOps Observatory React frontend (served at /)
@@ -71,29 +71,30 @@ Every package extends `tsconfig.base.json` which sets `composite: true`. The roo
 
 ## Packages
 
-### `artifacts/devops-observatory` (`@workspace/devops-observatory`)
+### `artifacts/devops-observatory` (`@devops-observatory/web`)
 
 React + Vite frontend served at `/`. Uses shadcn/ui, Recharts, Framer Motion.
 
-- `pnpm --filter @workspace/devops-observatory run dev` — run dev server
-- `pnpm --filter @workspace/devops-observatory run build` — production build
+- `pnpm run dev` — run the frontend from the repo root
+- `pnpm --filter @devops-observatory/web run build` — production build
 
-### `artifacts/api-server` (`@workspace/api-server`)
+### `artifacts/api-server` (`@devops-observatory/api-server`)
 
-Express 5 API server. Routes live in `src/routes/` and use `@workspace/api-zod` for validation and `@workspace/db` for persistence. Auto-seeds database on first start.
+Express 5 API server. Routes live in `src/routes/` and use `@devops-observatory/api-zod` for validation and `@devops-observatory/db` for persistence. Auto-seeds database on first start.
 
 - Entry: `src/index.ts`
 - Routes: services, logs, apm, alerts, slo, dashboard
-- `pnpm --filter @workspace/api-server run dev`
+- `pnpm --filter @devops-observatory/api-server run dev`
 
-### `lib/db` (`@workspace/db`)
+### `lib/db` (`@devops-observatory/db`)
 
 Drizzle ORM schema in `src/schema/observatory.ts`.
-- `pnpm --filter @workspace/db run push` — push schema to DB
 
-### `lib/api-spec` (`@workspace/api-spec`)
+- `pnpm --filter @devops-observatory/db run push` — push schema to DB
 
-OpenAPI spec in `openapi.yaml`. Run codegen: `pnpm --filter @workspace/api-spec run codegen`
+### `lib/api-spec` (`@devops-observatory/api-spec`)
+
+OpenAPI spec in `openapi.yaml`. Run codegen: `pnpm --filter @devops-observatory/api-spec run codegen`
 
 ### `lib/api-zod` / `lib/api-client-react`
 

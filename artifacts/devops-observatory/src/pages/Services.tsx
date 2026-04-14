@@ -1,5 +1,12 @@
 import { useServicesPoll } from "@/hooks/use-services";
-import { Server, Zap, GitBranch, Activity, Clock } from "lucide-react";
+import {
+  Server,
+  Zap,
+  GitBranch,
+  Activity,
+  Clock,
+  AlertTriangle,
+} from "lucide-react";
 import { motion } from "framer-motion";
 import { PageState } from "@/components/states/PageState";
 

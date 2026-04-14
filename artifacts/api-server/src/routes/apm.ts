@@ -54,6 +54,7 @@ router.get("/apm/traces", async (req, res): Promise<void> => {
     GetTracesResponse.parse(
       traces.map((t) => ({
         ...t,
+        parentSpanId: t.parentSpanId ?? undefined,
         timestamp: t.timestamp.toISOString(),
       })),
     ),

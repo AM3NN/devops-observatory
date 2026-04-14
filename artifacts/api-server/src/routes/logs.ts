@@ -4,6 +4,7 @@ import { desc, eq, ilike, and, type SQL } from "drizzle-orm";
 import { GetLogsResponse, IngestLogBody } from "@devops-observatory/api-zod";
 import { randomUUID } from "crypto";
 import { ensureObservedService } from "../lib/service-registry";
+import { indexLogDocument, searchLogDocuments } from "../lib/elasticsearch";
 
 const router: IRouter = Router();
 
@@ -25,6 +26,39 @@ router.get("/logs", async (req, res): Promise<void> => {
   const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
   const limitNum = Math.min(parseInt(limit, 10) || 50, 500);
   const offsetNum = parseInt(offset, 10) || 0;
+
+  const elasticsearchResult = await searchLogDocuments({
+    level,
+    service,
+    search,
+    limit: limitNum,
+    offset: offsetNum,
+  });
+
+  if (elasticsearchResult) {
+    res.json(
+      GetLogsResponse.parse({
+        logs: elasticsearchResult.logs.map((log) => ({
+          id: log.id,
+          timestamp: log.timestamp,
+          level: log.level,
+          service: log.service,
+          message: log.message,
+          environment: log.environment,
+          traceId: log.traceId,
+          spanId: log.spanId,
+          metadata:
+            log.metadata && typeof log.metadata === "object"
+              ? (log.metadata as Record<string, unknown>)
+              : undefined,
+        })),
+        total: elasticsearchResult.total,
+        offset: offsetNum,
+        limit: limitNum,
+      }),
+    );
+    return;
+  }
 
   const [logs, countResult] = await Promise.all([
     db
@@ -85,6 +119,18 @@ router.post("/logs", async (req, res): Promise<void> => {
       metadata: data.metadata ?? null,
     })
     .returning();
+
+  await indexLogDocument({
+    id: log.id,
+    timestamp: log.timestamp.toISOString(),
+    level: log.level,
+    service: log.service,
+    message: log.message,
+    environment: log.environment,
+    traceId: log.traceId ?? undefined,
+    spanId: log.spanId ?? undefined,
+    metadata: log.metadata ?? undefined,
+  });
 
   res.status(201).json({
     ...log,

@@ -10,6 +10,7 @@ import {
 } from "@devops-observatory/db";
 import { logger } from "./logger";
 import { randomUUID } from "crypto";
+import { indexLogDocument } from "./elasticsearch";
 
 export type LogLevel = "DEBUG" | "INFO" | "WARN" | "ERROR" | "FATAL";
 
@@ -38,10 +39,13 @@ export async function recordLog(
   spanId?: string,
   metadata?: Record<string, unknown>,
 ): Promise<void> {
+  const id = randomUUID();
+  const timestamp = new Date();
+
   try {
     await db.insert(logsTable).values({
-      id: randomUUID(),
-      timestamp: new Date(),
+      id,
+      timestamp,
       level,
       service: serviceId,
       message,
@@ -49,6 +53,18 @@ export async function recordLog(
       spanId: spanId ?? null,
       environment: "production",
       metadata: metadata ?? null,
+    });
+
+    await indexLogDocument({
+      id,
+      timestamp: timestamp.toISOString(),
+      level,
+      service: serviceId,
+      message,
+      environment: "production",
+      traceId: traceId ?? undefined,
+      spanId: spanId ?? undefined,
+      metadata: metadata ?? undefined,
     });
   } catch (err) {
     logger.error({ err }, "Failed to record log");

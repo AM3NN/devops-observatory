@@ -148,12 +148,16 @@ http://localhost:3000/
 - `PORT`: API server port
 - `DATABASE_URL`: PostgreSQL connection string
 - `OBSERVATORY_DEMO_MODE`: `true` to enable simulated traffic, alerts, and SLOs
+- `ELASTICSEARCH_URL`: optional Elasticsearch endpoint used to index ingested logs
+- `ELASTICSEARCH_API_KEY`: optional API key for secured Elasticsearch clusters
+- `ELASTICSEARCH_LOGS_INDEX`: optional logs index name, defaults to `observatory-logs`
 
 ### Frontend
 
 - `PORT`: Vite dev server port, defaults to `3000`
 - `BASE_PATH`: public base path, defaults to `/`
 - `VITE_API_PROXY_TARGET`: local API target for `/api` proxying in development, defaults to `http://localhost:4000`
+- `VITE_API_BASE_URL`: absolute backend base URL for deployed frontend builds, for example `https://your-api.up.railway.app`
 
 ## Workspace Scripts
 
@@ -277,6 +281,74 @@ Planned next steps for a more production-like observability platform:
 - deeper ELK / Prometheus / Grafana integration
 - authentication and RBAC
 - periodic reporting and exports
+
+Elasticsearch progress so far:
+
+- ingested logs can now be indexed into Elasticsearch when `ELASTICSEARCH_URL` is configured
+- `/api/logs` now prefers Elasticsearch reads when it is configured and falls back to PostgreSQL otherwise
+- the next ELK step is adding Kibana and completing a full Elasticsearch-first log exploration workflow
+
+## Deployment
+
+Recommended setup for this project:
+
+- **Frontend**: Vercel
+- **Backend**: Railway or Render
+- **Database**: Railway Postgres, Render Postgres, Neon, or Supabase Postgres
+
+### Frontend deployment
+
+Deploy `artifacts/devops-observatory` as the frontend app.
+
+Suggested Vercel settings:
+
+- **Framework preset**: Vite
+- **Root directory**: `artifacts/devops-observatory`
+- **Build command**: `pnpm --filter @devops-observatory/web build`
+- **Output directory**: `dist/public`
+
+Required frontend environment variables:
+
+- `VITE_API_BASE_URL=https://your-backend-domain`
+
+### Backend deployment
+
+Deploy `artifacts/api-server` as the API app.
+
+Suggested Railway/Render settings:
+
+- **Root directory**: `artifacts/api-server`
+- **Build command**: `pnpm --filter @devops-observatory/api-server build`
+- **Start command**: `node --enable-source-maps dist/index.mjs`
+
+Required backend environment variables:
+
+- `DATABASE_URL=<your-postgres-connection-string>`
+- `PORT=4000` (or platform-provided port if required)
+- `OBSERVATORY_DEMO_MODE=false`
+
+Optional ELK variables:
+
+- `ELASTICSEARCH_URL=https://your-elasticsearch-host:9200`
+- `ELASTICSEARCH_API_KEY=...`
+- `ELASTICSEARCH_LOGS_INDEX=observatory-logs`
+
+### Database initialization
+
+Before the first production run, apply the schema using:
+
+```bash
+pnpm --filter @devops-observatory/db push
+```
+
+### Recommended deployment order
+
+1. Provision PostgreSQL
+2. Set `DATABASE_URL`
+3. Apply schema with `pnpm --filter @devops-observatory/db push`
+4. Deploy backend and verify `/api/healthz`
+5. Deploy frontend with `VITE_API_BASE_URL` pointing to the backend
+6. Verify `Dashboard`, `Services`, `Logs`, and `APM`
 
 ## License
 

@@ -37,6 +37,7 @@ import {
   ensureObservedService,
   updateObservedServiceSnapshot,
 } from "../lib/service-registry";
+import { indexLogDocuments } from "../lib/elasticsearch";
 
 const router: IRouter = Router();
 
@@ -182,6 +183,20 @@ router.post(
     );
 
     await db.insert(logsTable).values(rows);
+
+    await indexLogDocuments(
+      rows.map((row) => ({
+        id: row.id,
+        timestamp: row.timestamp.toISOString(),
+        level: row.level,
+        service: row.service,
+        message: row.message,
+        environment: row.environment,
+        traceId: row.traceId ?? undefined,
+        spanId: row.spanId ?? undefined,
+        metadata: row.metadata ?? undefined,
+      })),
+    );
 
     if (agentId !== "demo-agent") {
       await db

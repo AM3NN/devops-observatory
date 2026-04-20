@@ -11,6 +11,7 @@ import {
 import { logger } from "./logger";
 import { randomUUID } from "crypto";
 import { indexLogDocument } from "./elasticsearch";
+import { forwardLogToLogstash } from "./logstash";
 
 export type LogLevel = "DEBUG" | "INFO" | "WARN" | "ERROR" | "FATAL";
 
@@ -56,6 +57,18 @@ export async function recordLog(
     });
 
     await indexLogDocument({
+      id,
+      timestamp: timestamp.toISOString(),
+      level,
+      service: serviceId,
+      message,
+      environment: "production",
+      traceId: traceId ?? undefined,
+      spanId: spanId ?? undefined,
+      metadata: metadata ?? undefined,
+    });
+
+    await forwardLogToLogstash({
       id,
       timestamp: timestamp.toISOString(),
       level,

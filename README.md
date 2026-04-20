@@ -151,6 +151,9 @@ http://localhost:3000/
 - `ELASTICSEARCH_URL`: optional Elasticsearch endpoint used to index ingested logs
 - `ELASTICSEARCH_API_KEY`: optional API key for secured Elasticsearch clusters
 - `ELASTICSEARCH_LOGS_INDEX`: optional logs index name, defaults to `observatory-logs`
+- `LOGSTASH_HOST`: optional Logstash TCP host for forwarding logs through Logstash
+- `LOGSTASH_PORT`: optional Logstash TCP port, defaults to `5000`
+- `LOGSTASH_TIMEOUT_MS`: optional timeout for Logstash forwarding, defaults to `2000`
 
 ### Frontend
 
@@ -286,6 +289,7 @@ Elasticsearch progress so far:
 
 - ingested logs can now be indexed into Elasticsearch when `ELASTICSEARCH_URL` is configured
 - `/api/logs` now prefers Elasticsearch reads when it is configured and falls back to PostgreSQL otherwise
+- logs can also be forwarded to Logstash over TCP JSON when `LOGSTASH_HOST` is configured
 - the next ELK step is adding Kibana and completing a full Elasticsearch-first log exploration workflow
 
 ## Deployment
@@ -332,6 +336,9 @@ Optional ELK variables:
 - `ELASTICSEARCH_URL=https://your-elasticsearch-host:9200`
 - `ELASTICSEARCH_API_KEY=...`
 - `ELASTICSEARCH_LOGS_INDEX=observatory-logs`
+- `LOGSTASH_HOST=localhost`
+- `LOGSTASH_PORT=5000`
+- `LOGSTASH_TIMEOUT_MS=2000`
 
 ### Database initialization
 

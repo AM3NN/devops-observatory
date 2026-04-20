@@ -5,6 +5,7 @@ import { GetLogsResponse, IngestLogBody } from "@devops-observatory/api-zod";
 import { randomUUID } from "crypto";
 import { ensureObservedService } from "../lib/service-registry";
 import { indexLogDocument, searchLogDocuments } from "../lib/elasticsearch";
+import { forwardLogToLogstash } from "../lib/logstash";
 
 const router: IRouter = Router();
 
@@ -121,6 +122,18 @@ router.post("/logs", async (req, res): Promise<void> => {
     .returning();
 
   await indexLogDocument({
+    id: log.id,
+    timestamp: log.timestamp.toISOString(),
+    level: log.level,
+    service: log.service,
+    message: log.message,
+    environment: log.environment,
+    traceId: log.traceId ?? undefined,
+    spanId: log.spanId ?? undefined,
+    metadata: log.metadata ?? undefined,
+  });
+
+  await forwardLogToLogstash({
     id: log.id,
     timestamp: log.timestamp.toISOString(),
     level: log.level,

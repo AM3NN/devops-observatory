@@ -1,4 +1,7 @@
-import { useGetDashboardSummary, useGetTrafficData } from "@workspace/api-client-react";
+import {
+  useGetDashboardSummary,
+  useGetTrafficData,
+} from "@devops-observatory/api-client-react";
 
 export function useDashboardPoll() {
   return useGetDashboardSummary({

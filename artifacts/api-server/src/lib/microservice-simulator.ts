@@ -21,11 +21,11 @@ import { recordLog, recordTrace, type LogLevel } from "./instrumentation";
 export interface ServiceConfig {
   id: string;
   name: string;
-  baseLatencyMs: number;       // normal latency
-  peakLatencyMs: number;       // latency under peak load
-  baseErrorRate: number;       // normal error rate (0-1)
-  peakErrorRate: number;       // error rate during peak load
-  operations: string[];        // list of operation names
+  baseLatencyMs: number; // normal latency
+  peakLatencyMs: number; // latency under peak load
+  baseErrorRate: number; // normal error rate (0-1)
+  peakErrorRate: number; // error rate during peak load
+  operations: string[]; // list of operation names
 }
 
 export const SERVICES: ServiceConfig[] = [
@@ -36,7 +36,12 @@ export const SERVICES: ServiceConfig[] = [
     peakLatencyMs: 280,
     baseErrorRate: 0.01,
     peakErrorRate: 0.04,
-    operations: ["routeRequest", "rateLimitCheck", "authValidation", "responseAggregation"],
+    operations: [
+      "routeRequest",
+      "rateLimitCheck",
+      "authValidation",
+      "responseAggregation",
+    ],
   },
   {
     id: "svc-auth",
@@ -45,7 +50,13 @@ export const SERVICES: ServiceConfig[] = [
     peakLatencyMs: 150,
     baseErrorRate: 0.005,
     peakErrorRate: 0.02,
-    operations: ["login", "tokenRefresh", "logout", "validateToken", "revokeToken"],
+    operations: [
+      "login",
+      "tokenRefresh",
+      "logout",
+      "validateToken",
+      "revokeToken",
+    ],
   },
   {
     id: "svc-user",
@@ -54,7 +65,13 @@ export const SERVICES: ServiceConfig[] = [
     peakLatencyMs: 320,
     baseErrorRate: 0.02,
     peakErrorRate: 0.06,
-    operations: ["getProfile", "updateProfile", "listUsers", "deleteUser", "searchUsers"],
+    operations: [
+      "getProfile",
+      "updateProfile",
+      "listUsers",
+      "deleteUser",
+      "searchUsers",
+    ],
   },
   {
     id: "svc-payment",
@@ -63,7 +80,13 @@ export const SERVICES: ServiceConfig[] = [
     peakLatencyMs: 850,
     baseErrorRate: 0.03,
     peakErrorRate: 0.08,
-    operations: ["processPayment", "refund", "getInvoice", "validateCard", "checkBalance"],
+    operations: [
+      "processPayment",
+      "refund",
+      "getInvoice",
+      "validateCard",
+      "checkBalance",
+    ],
   },
   {
     id: "svc-notification",
@@ -72,7 +95,13 @@ export const SERVICES: ServiceConfig[] = [
     peakLatencyMs: 400,
     baseErrorRate: 0.015,
     peakErrorRate: 0.05,
-    operations: ["sendEmail", "sendSMS", "pushNotification", "getBatchStatus", "retryFailed"],
+    operations: [
+      "sendEmail",
+      "sendSMS",
+      "pushNotification",
+      "getBatchStatus",
+      "retryFailed",
+    ],
   },
   {
     id: "svc-analytics",
@@ -81,7 +110,13 @@ export const SERVICES: ServiceConfig[] = [
     peakLatencyMs: 600,
     baseErrorRate: 0.01,
     peakErrorRate: 0.03,
-    operations: ["trackEvent", "aggregateMetrics", "generateReport", "getStats", "exportData"],
+    operations: [
+      "trackEvent",
+      "aggregateMetrics",
+      "generateReport",
+      "getStats",
+      "exportData",
+    ],
   },
 ];
 
@@ -100,98 +135,95 @@ function isPeakHour(): boolean {
 
 const SUCCESS_MESSAGES: Record<string, string[]> = {
   login: [
-    "Authentification réussie pour l'utilisateur",
-    "Token JWT émis avec succès (exp: 3600s)",
-    "Session créée — IP: 192.168.1.x",
+    "User authenticated successfully",
+    "JWT token issued successfully (exp: 3600s)",
+    "Session created - IP: 192.168.1.x",
   ],
   tokenRefresh: [
-    "Token rafraîchi avec succès",
-    "Refresh token valide, nouveau access token généré",
+    "Token refreshed successfully",
+    "Refresh token validated, new access token generated",
   ],
   validateToken: [
-    "Token JWT valide — claims vérifiés",
-    "Signature token vérifiée avec succès",
+    "JWT token valid - claims verified",
+    "Token signature verified successfully",
   ],
   getProfile: [
-    "Profil utilisateur récupéré depuis le cache",
-    "Profil utilisateur chargé depuis la base de données",
-    "Cache HIT — user:profile:*",
+    "User profile retrieved from cache",
+    "User profile loaded from the database",
+    "Cache HIT - user:profile:*",
   ],
   updateProfile: [
-    "Profil mis à jour avec succès",
-    "Données utilisateur sauvegardées en base",
+    "Profile updated successfully",
+    "User data saved to the database",
   ],
   processPayment: [
-    "Paiement traité avec succès — Transaction ID: TXN-*",
-    "Autorisation bancaire reçue (code 00)",
-    "Paiement validé — montant débité",
+    "Payment processed successfully - Transaction ID: TXN-*",
+    "Bank authorization received (code 00)",
+    "Payment validated - amount charged",
   ],
-  refund: [
-    "Remboursement initié avec succès",
-    "Reversal envoyé à la banque",
-  ],
+  refund: ["Refund initiated successfully", "Reversal sent to the bank"],
   sendEmail: [
-    "Email envoyé avec succès — SMTP 250 OK",
-    "Email mis en file d'attente pour envoi",
+    "Email sent successfully - SMTP 250 OK",
+    "Email queued for delivery",
   ],
   sendSMS: [
-    "SMS envoyé avec succès — status: delivered",
-    "SMS transmis à l'opérateur",
+    "SMS sent successfully - status: delivered",
+    "SMS handed off to the carrier",
   ],
   trackEvent: [
-    "Événement enregistré dans le flux Kafka",
-    "Event batché — flush dans 5s",
-    "Événement analytique persisté",
+    "Event recorded in the Kafka stream",
+    "Event batched - flush in 5s",
+    "Analytics event persisted",
   ],
   routeRequest: [
-    "Requête routée vers le service cible",
-    "Route résolue — latence proxy: *ms",
+    "Request routed to the target service",
+    "Route resolved - proxy latency: *ms",
   ],
   default: [
-    "Opération complétée avec succès",
-    "Traitement terminé",
-    "Réponse envoyée au client",
+    "Operation completed successfully",
+    "Processing completed",
+    "Response sent to client",
   ],
 };
 
 const WARN_MESSAGES: string[] = [
-  "Latence élevée détectée: *ms > seuil 500ms",
-  "Tentative de reconnexion à Redis (tentative 2/3)",
-  "Quota rate-limiting proche: 82% utilisé",
-  "Temps de réponse dégradé — pool de connexions saturé",
-  "Retry sur l'appel sortant (tentative 2/3)",
-  "Cache manqué — fallback base de données",
-  "Mémoire heap proche du maximum: 87%",
-  "Certificat TLS expirant dans 12 jours",
+  "High latency detected: *ms > 500ms threshold",
+  "Retrying Redis connection (attempt 2/3)",
+  "Rate-limiting quota nearing threshold: 82% used",
+  "Response time degraded - connection pool saturated",
+  "Retrying outbound call (attempt 2/3)",
+  "Cache miss - falling back to database",
+  "Heap memory nearing maximum: 87%",
+  "TLS certificate expires in 12 days",
 ];
 
 const ERROR_MESSAGES: Record<string, string[]> = {
   processPayment: [
-    "Paiement refusé — code: insufficient_funds",
-    "Timeout gateway bancaire après 3000ms",
-    "Erreur validation CVV — carte invalide",
-    "Connexion Stripe échouée: Network Error",
+    "Payment declined - code: insufficient_funds",
+    "Payment gateway timeout after 3000ms",
+    "CVV validation failed - invalid card",
+    "Stripe connection failed: Network Error",
   ],
   login: [
-    "Échec authentification — mot de passe incorrect",
-    "Compte verrouillé après 5 tentatives",
-    "Token CSRF invalide",
+    "Authentication failed - incorrect password",
+    "Account locked after 5 attempts",
+    "Invalid CSRF token",
   ],
   validateToken: [
-    "Token JWT expiré — signature invalide",
-    "Audience invalide dans le token",
+    "JWT token expired - invalid signature",
+    "Invalid token audience",
   ],
   sendSMS: [
-    "Quota SMS mensuel dépassé",
-    "Numéro de téléphone invalide",
-    "Opérateur SMS indisponible",
+    "Monthly SMS quota exceeded",
+    "Invalid phone number",
+    "SMS carrier unavailable",
   ],
   default: [
-    "Erreur interne du service",
-    "Connexion base de données échouée: timeout",
-    "Exception non gérée: NullPointerException",
-    "Service dépendant indisponible — circuit breaker ouvert",
-    "Timeout sur l'appel externe après 5000ms",
+    "Internal service error",
+    "Database connection failed: timeout",
+    "Unhandled exception: NullPointerException",
+    "Dependent service unavailable - circuit breaker open",
+    "External call timed out after 5000ms",
   ],
 };
 
@@ -224,8 +256,16 @@ export async function simulateRequest(service: ServiceConfig): Promise<{
   const isError = Math.random() < errorRate;
   const isTimeout = durationMs > 2000;
 
-  const statusCode = isError ? (isTimeout ? 504 : pickRandom([400, 500, 502, 503])) : 200;
-  const traceStatus: "ok" | "error" | "timeout" = isTimeout ? "timeout" : (isError ? "error" : "ok");
+  const statusCode = isError
+    ? isTimeout
+      ? 504
+      : pickRandom([400, 500, 502, 503])
+    : 200;
+  const traceStatus: "ok" | "error" | "timeout" = isTimeout
+    ? "timeout"
+    : isError
+      ? "error"
+      : "ok";
 
   // Determine log level
   let level: LogLevel = "INFO";
@@ -240,7 +280,7 @@ export async function simulateRequest(service: ServiceConfig): Promise<{
     message = resolveMessage(WARN_MESSAGES);
   } else if (Math.random() < 0.1) {
     level = "DEBUG";
-    message = `[DEBUG] ${operation} — durée: ${durationMs}ms, trace: ${traceId.substring(0, 8)}`;
+    message = `[DEBUG] ${operation} - duration: ${durationMs}ms, trace: ${traceId.substring(0, 8)}`;
   } else {
     const pool = SUCCESS_MESSAGES[operation] ?? SUCCESS_MESSAGES["default"];
     message = resolveMessage(pool);
@@ -254,12 +294,21 @@ export async function simulateRequest(service: ServiceConfig): Promise<{
       statusCode,
       isPeak,
     }),
-    recordTrace(service.id, operation, durationMs, traceStatus, traceId, spanId, undefined, {
-      "http.status_code": statusCode,
-      "http.method": pickRandom(["GET", "POST", "PUT", "DELETE"]),
-      "service.version": "v2.3.1",
-      "peak.hour": isPeak,
-    }),
+    recordTrace(
+      service.id,
+      operation,
+      durationMs,
+      traceStatus,
+      traceId,
+      spanId,
+      undefined,
+      {
+        "http.status_code": statusCode,
+        "http.method": pickRandom(["GET", "POST", "PUT", "DELETE"]),
+        "service.version": "v2.3.1",
+        "peak.hour": isPeak,
+      },
+    ),
   ]).catch(() => {});
 
   return { durationMs, isError, statusCode };

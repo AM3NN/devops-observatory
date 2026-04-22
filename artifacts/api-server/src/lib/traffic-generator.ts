@@ -9,9 +9,13 @@
  * to apm_metrics so the APM dashboard shows real data.
  */
 
-import { SERVICES, simulateRequest, type ServiceConfig } from "./microservice-simulator";
+import {
+  SERVICES,
+  simulateRequest,
+  type ServiceConfig,
+} from "./microservice-simulator";
 import { flushApmMetrics } from "./instrumentation";
-import { db, servicesTable } from "@workspace/db";
+import { db, servicesTable } from "@devops-observatory/db";
 import { eq } from "drizzle-orm";
 import { logger } from "./logger";
 
@@ -25,7 +29,11 @@ const accumulators = new Map<string, ServiceMetricsAccumulator>();
 
 function getAccumulator(serviceId: string): ServiceMetricsAccumulator {
   if (!accumulators.has(serviceId)) {
-    accumulators.set(serviceId, { responseTimes: [], errorCount: 0, totalCount: 0 });
+    accumulators.set(serviceId, {
+      responseTimes: [],
+      errorCount: 0,
+      totalCount: 0,
+    });
   }
   return accumulators.get(serviceId)!;
 }
@@ -41,9 +49,9 @@ function getRequestsPerTick(): number {
   if (peak) {
     // 08-11h: heavy surge, 11-14h: medium, 14-18h: sustained
     const h = new Date().getHours();
-    if (h >= 9 && h <= 11) return Math.floor(Math.random() * 6) + 8;   // 8-14 req/tick
-    if (h >= 8 && h <= 13) return Math.floor(Math.random() * 4) + 4;   // 4-8 req/tick
-    return Math.floor(Math.random() * 3) + 2;                           // 2-5 req/tick
+    if (h >= 9 && h <= 11) return Math.floor(Math.random() * 6) + 8; // 8-14 req/tick
+    if (h >= 8 && h <= 13) return Math.floor(Math.random() * 4) + 4; // 4-8 req/tick
+    return Math.floor(Math.random() * 3) + 2; // 2-5 req/tick
   }
   // Off-peak: occasional background requests
   return Math.random() < 0.3 ? Math.floor(Math.random() * 2) + 1 : 0;
@@ -65,7 +73,9 @@ function getSimulatedMemoryUsage(svc: ServiceConfig): number {
 
 function getSimulatedConnections(svc: ServiceConfig): number {
   const peak = isPeakHour();
-  return peak ? Math.floor(Math.random() * 150) + 40 : Math.floor(Math.random() * 20) + 5;
+  return peak
+    ? Math.floor(Math.random() * 150) + 40
+    : Math.floor(Math.random() * 20) + 5;
 }
 
 /**
@@ -76,7 +86,9 @@ async function tick(): Promise<void> {
   if (count === 0) return;
 
   const service = SERVICES[Math.floor(Math.random() * SERVICES.length)];
-  const promises = Array.from({ length: count }, () => simulateRequest(service));
+  const promises = Array.from({ length: count }, () =>
+    simulateRequest(service),
+  );
   const results = await Promise.allSettled(promises);
 
   const acc = getAccumulator(service.id);
@@ -114,7 +126,8 @@ async function flushMetrics(): Promise<void> {
 
     // Update service health status based on real error rate
     const errorRate = acc.errorCount / acc.totalCount;
-    const avgResponse = acc.responseTimes.reduce((a, b) => a + b, 0) / acc.responseTimes.length;
+    const avgResponse =
+      acc.responseTimes.reduce((a, b) => a + b, 0) / acc.responseTimes.length;
 
     let status: "healthy" | "degraded" | "down" = "healthy";
     if (errorRate > 0.1 || avgResponse > 1000) status = "down";
@@ -133,7 +146,11 @@ async function flushMetrics(): Promise<void> {
       .catch(() => {});
 
     // Reset accumulator
-    accumulators.set(svc.id, { responseTimes: [], errorCount: 0, totalCount: 0 });
+    accumulators.set(svc.id, {
+      responseTimes: [],
+      errorCount: 0,
+      totalCount: 0,
+    });
   }
 }
 

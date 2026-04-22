@@ -1,5 +1,5 @@
 {
-  "name": "@workspace/api-server",
+  "name": "@devops-observatory/api-server",
   "version": "0.0.0",
   "private": true,
   "type": "module",
@@ -10,8 +10,10 @@
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
-    "@workspace/api-zod": "workspace:*",
-    "@workspace/db": "workspace:*",
+    "@elastic/elasticsearch": "^8.15.0",
+    "@opentelemetry/api": "^1.9.0",
+    "@devops-observatory/api-zod": "workspace:*",
+    "@devops-observatory/db": "workspace:*",
     "cookie-parser": "^1.4.7",
     "cors": "^2",
     "drizzle-orm": "catalog:",

@@ -8,5 +8,5 @@ packages:
 
 notes:
   - "The application uses a dark mode by default to match the 'professional DevOps monitoring' aesthetic."
-  - "All data fetching is handled via the pre-generated hooks from @workspace/api-client-react."
+  - "All data fetching is handled via the pre-generated hooks from @devops-observatory/api-client-react."
   - "Polling intervals are configured per the specification: Dashboard (10s), Logs (15s), Alerts (30s)."

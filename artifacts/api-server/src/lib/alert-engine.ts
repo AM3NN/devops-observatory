@@ -21,7 +21,6 @@ import {
 } from "@devops-observatory/db";
 import { eq, and, gte, desc, count } from "drizzle-orm";
 import { logger } from "./logger";
-import { randomUUID } from "crypto";
 
 interface AlertRule {
   id: string;
@@ -245,6 +244,101 @@ async function evaluateRule(rule: AlertRule): Promise<void> {
   }
 }
 
+async function syncServiceStatusAlerts(): Promise<void> {
+  try {
+    const services = await db.select().from(servicesTable);
+
+    for (const service of services) {
+      const alertId = `service-status-${service.id}`;
+      const shouldFire =
+        service.status === "degraded" || service.status === "down";
+      const severity = service.status === "down" ? "critical" : "warning";
+      const description =
+        service.status === "down"
+          ? `${service.name} is down. Latest response time is ${service.responseTime}ms with an error rate of ${service.errorRate}%.`
+          : `${service.name} is degraded. Latest response time is ${service.responseTime}ms with an error rate of ${service.errorRate}%.`;
+
+      const [existing] = await db
+        .select()
+        .from(alertsTable)
+        .where(eq(alertsTable.id, alertId));
+
+      if (!existing && shouldFire) {
+        await db.insert(alertsTable).values({
+          id: alertId,
+          title: `${service.name} ${service.status === "down" ? "Down" : "Degraded"}`,
+          description,
+          severity,
+          status: "firing",
+          service: service.id,
+          firedAt: new Date(),
+          resolvedAt: null,
+          acknowledgedAt: null,
+          acknowledgedBy: null,
+          peakLoadPeriod: false,
+          runbook: null,
+          labels: {
+            env: service.environment,
+            team: service.team,
+            auto: true,
+            source: "service-registry",
+          },
+        });
+
+        logger.warn(
+          { alertId, service: service.id },
+          "Service status alert fired",
+        );
+        continue;
+      }
+
+      if (!existing) {
+        continue;
+      }
+
+      if (shouldFire) {
+        await db
+          .update(alertsTable)
+          .set({
+            title: `${service.name} ${service.status === "down" ? "Down" : "Degraded"}`,
+            description,
+            severity,
+            status:
+              existing.status === "acknowledged" ? existing.status : "firing",
+            resolvedAt: null,
+            peakLoadPeriod: false,
+            labels: {
+              env: service.environment,
+              team: service.team,
+              auto: true,
+              source: "service-registry",
+            },
+          })
+          .where(eq(alertsTable.id, alertId));
+
+        continue;
+      }
+
+      if (existing.status !== "resolved") {
+        await db
+          .update(alertsTable)
+          .set({
+            status: "resolved",
+            resolvedAt: new Date(),
+          })
+          .where(eq(alertsTable.id, alertId));
+
+        logger.info(
+          { alertId, service: service.id },
+          "Service status alert resolved",
+        );
+      }
+    }
+  } catch (err) {
+    logger.error({ err }, "Service status alert sync failed");
+  }
+}
+
 /**
  * Start the alert engine — evaluates all rules every 30 seconds
  */
@@ -255,6 +349,8 @@ export function startAlertEngine(): void {
     for (const rule of ALERT_RULES) {
       await evaluateRule(rule);
     }
+
+    await syncServiceStatusAlerts();
   };
 
   // Run immediately on start

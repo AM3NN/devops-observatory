@@ -264,6 +264,34 @@ curl -X POST http://localhost:4000/api/ingest/traces \
   }'
 ```
 
+## Live Sample Service
+
+A minimal sample telemetry sender is available in:
+
+```text
+examples/live-sample-service
+```
+
+Run it in live mode with:
+
+```bash
+cd examples/live-sample-service
+OBSERVATORY_URL=http://localhost:4000/api \
+OBSERVATORY_API_KEY=obs-key-pfe-demo-2024 \
+SERVICE_NAME=sample-live-service \
+ENVIRONMENT=production \
+npm start
+```
+
+It periodically sends:
+
+- logs
+- metrics
+- traces
+- heartbeat
+
+This is useful for validating the full live observability flow without relying on demo mode.
+
 ## Current State
 
 Already implemented:

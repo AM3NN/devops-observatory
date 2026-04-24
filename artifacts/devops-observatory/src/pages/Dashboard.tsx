@@ -67,7 +67,7 @@ const itemVariants = {
   show: {
     opacity: 1,
     y: 0,
-    transition: { type: "spring", stiffness: 300, damping: 24 },
+    transition: { type: "spring" as const, stiffness: 300, damping: 24 },
   },
 };
 
@@ -186,20 +186,18 @@ export default function Dashboard() {
           return false;
         }
 
-        const candidate = point as Record<string, unknown>;
-
         return (
-          typeof candidate.time === "string" &&
-          typeof candidate.requests === "number" &&
-          typeof candidate.errors === "number" &&
-          typeof candidate.responseTime === "number"
+          typeof point.time === "string" &&
+          typeof point.requests === "number" &&
+          typeof point.errors === "number" &&
+          typeof point.responseTime === "number"
         );
       })
     : [];
   const serviceHealthMap = Array.isArray(services)
     ? [...services]
         .filter(
-          (service): service is ServiceHealthMapItem =>
+          (service): service is typeof service & ServiceHealthMapItem =>
             service != null &&
             typeof service === "object" &&
             typeof service.id === "string" &&

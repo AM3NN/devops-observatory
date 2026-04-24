@@ -186,7 +186,7 @@ router.post(
     await db.insert(logsTable).values(rows);
 
     await indexLogDocuments(
-      rows.map((row) => ({
+      rows.map((row: (typeof rows)[number]) => ({
         id: row.id,
         timestamp: row.timestamp.toISOString(),
         level: row.level,
@@ -200,7 +200,7 @@ router.post(
     );
 
     await forwardLogsToLogstash(
-      rows.map((row) => ({
+      rows.map((row: (typeof rows)[number]) => ({
         id: row.id,
         timestamp: row.timestamp.toISOString(),
         level: row.level,

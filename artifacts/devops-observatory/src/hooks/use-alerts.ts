@@ -9,6 +9,7 @@ import { useQueryClient } from "@tanstack/react-query";
 export function useAlertsPoll(params?: GetAlertsParams) {
   return useGetAlerts(params, {
     query: {
+      queryKey: getGetAlertsQueryKey(params),
       refetchInterval: 30000, // Poll every 30s
       select: (data) => (Array.isArray(data) ? data : []),
     },

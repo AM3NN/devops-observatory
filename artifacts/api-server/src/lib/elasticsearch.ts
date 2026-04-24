@@ -112,7 +112,7 @@ export async function searchLogDocuments({
     const filters = [
       level ? { term: { "level.keyword": level } } : null,
       service ? { term: { "service.keyword": service } } : null,
-    ].filter(Boolean);
+    ].filter((f): f is NonNullable<typeof f> => f != null);
 
     const query = search
       ? {

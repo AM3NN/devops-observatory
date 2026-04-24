@@ -110,6 +110,15 @@ export default function Slo() {
                 {slo.description}
               </p>
 
+              <div className="flex flex-wrap items-center gap-2 mb-5">
+                <span className="rounded-full border border-white/10 bg-background/50 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-slate-300">
+                  {slo.type.replace("_", " ")}
+                </span>
+                <span className="rounded-full border border-white/10 bg-background/50 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                  Window: {slo.window}
+                </span>
+              </div>
+
               <div className="space-y-5">
                 {/* Target vs Current */}
                 <div className="flex items-end justify-between border-b border-white/5 pb-4">

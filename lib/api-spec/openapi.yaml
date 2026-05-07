@@ -21,6 +21,8 @@ tags:
     description: Services registry
   - name: dashboard
     description: Dashboard metrics
+  - name: predictions
+    description: Predictive incident risk scoring
 
 paths:
   /healthz:
@@ -242,6 +244,21 @@ paths:
                 type: array
                 items:
                   $ref: "#/components/schemas/TrafficDataPoint"
+
+  /predictions/incidents:
+    get:
+      operationId: getIncidentPredictions
+      tags: [predictions]
+      summary: Predict incident risks from recent telemetry trends
+      responses:
+        "200":
+          description: Incident risk predictions
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/IncidentPrediction"
 
 components:
   schemas:
@@ -553,3 +570,58 @@ components:
         - requests
         - errors
         - responseTime
+
+    IncidentPrediction:
+      type: object
+      properties:
+        service:
+          type: string
+        serviceName:
+          type: string
+        score:
+          type: number
+        level:
+          type: string
+          enum: [low, medium, high]
+        horizonMinutes:
+          type: number
+        confidence:
+          type: number
+        reasons:
+          type: array
+          items:
+            type: string
+        signals:
+          type: object
+          properties:
+            latencyTrendPct:
+              type: number
+            errorRateTrendPct:
+              type: number
+            cpuUsage:
+              type: number
+            memoryUsage:
+              type: number
+            sloBurnRate:
+              type: number
+            recentErrorLogs:
+              type: number
+          required:
+            - latencyTrendPct
+            - errorRateTrendPct
+            - cpuUsage
+            - memoryUsage
+            - sloBurnRate
+            - recentErrorLogs
+        generatedAt:
+          type: string
+      required:
+        - service
+        - serviceName
+        - score
+        - level
+        - horizonMinutes
+        - confidence
+        - reasons
+        - signals
+        - generatedAt

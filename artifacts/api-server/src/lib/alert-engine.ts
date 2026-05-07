@@ -33,6 +33,59 @@ interface AlertRule {
   check: () => Promise<{ firing: boolean; value: number }>;
 }
 
+type EscalationLevel = "n1" | "n2" | "n3" | "management";
+
+function getEscalationForAlert(
+  severity: "critical" | "warning" | "info",
+  firedAt: Date,
+): { level: EscalationLevel; team: string; minutesOpen: number } {
+  const minutesOpen = Math.max(
+    0,
+    Math.floor((Date.now() - firedAt.getTime()) / 60_000),
+  );
+
+  if (severity === "critical") {
+    if (minutesOpen >= 60) {
+      return { level: "management", team: "Management", minutesOpen };
+    }
+
+    if (minutesOpen >= 30) {
+      return { level: "n3", team: "DevOps / Engineering", minutesOpen };
+    }
+
+    if (minutesOpen >= 15) {
+      return { level: "n2", team: "Support N2", minutesOpen };
+    }
+
+    return { level: "n1", team: "Support N1", minutesOpen };
+  }
+
+  if (minutesOpen >= 30) {
+    return { level: "n3", team: "DevOps / Engineering", minutesOpen };
+  }
+
+  if (minutesOpen >= 15) {
+    return { level: "n2", team: "Support N2", minutesOpen };
+  }
+
+  return { level: "n1", team: "Support N1", minutesOpen };
+}
+
+function buildAlertLabels(
+  baseLabels: Record<string, unknown>,
+  severity: "critical" | "warning" | "info",
+  firedAt: Date,
+) {
+  const escalation = getEscalationForAlert(severity, firedAt);
+
+  return {
+    ...baseLabels,
+    escalationLevel: escalation.level,
+    escalationTeam: escalation.team,
+    minutesOpen: escalation.minutesOpen,
+  };
+}
+
 function isPeakHour(): boolean {
   const h = new Date().getHours();
   return h >= 8 && h <= 18;
@@ -184,21 +237,25 @@ async function evaluateRule(rule: AlertRule): Promise<void> {
 
     if (!existing) {
       // Insert new alert row
-      await db.insert(alertsTable).values({
-        id: rule.id,
-        title: rule.title,
+        await db.insert(alertsTable).values({
+          id: rule.id,
+          title: rule.title,
         description: rule.description(value),
         severity: rule.severity,
         status: firing ? "firing" : "resolved",
         service: rule.service,
         firedAt: firing ? new Date() : new Date(0),
-        resolvedAt: firing ? null : new Date(),
-        peakLoadPeriod: rule.peakLoadPeriod && isPeakHour(),
-        runbook: rule.runbook,
-        labels: { env: "production", team: "ops", auto: true },
-      });
-      return;
-    }
+          resolvedAt: firing ? null : new Date(),
+          peakLoadPeriod: rule.peakLoadPeriod && isPeakHour(),
+          runbook: rule.runbook,
+          labels: buildAlertLabels(
+            { env: "production", team: "ops", auto: true, source: "rule-engine" },
+            rule.severity,
+            firing ? new Date() : new Date(0),
+          ),
+        });
+        return;
+      }
 
     const isCurrentlyFiring = existing.status === "firing";
     const isAcknowledged = existing.status === "acknowledged";
@@ -215,6 +272,11 @@ async function evaluateRule(rule: AlertRule): Promise<void> {
           acknowledgedBy: null,
           description: rule.description(value),
           peakLoadPeriod: rule.peakLoadPeriod && isPeakHour(),
+          labels: buildAlertLabels(
+            { env: "production", team: "ops", auto: true, source: "rule-engine" },
+            rule.severity,
+            new Date(),
+          ),
         })
         .where(eq(alertsTable.id, rule.id));
 
@@ -236,6 +298,16 @@ async function evaluateRule(rule: AlertRule): Promise<void> {
         .update(alertsTable)
         .set({
           description: rule.description(value),
+          labels: buildAlertLabels(
+            ((existing.labels as Record<string, unknown> | null) ?? {
+              env: "production",
+              team: "ops",
+              auto: true,
+              source: "rule-engine",
+            }) as Record<string, unknown>,
+            rule.severity,
+            existing.firedAt,
+          ),
         })
         .where(eq(alertsTable.id, rule.id));
     }
@@ -277,12 +349,16 @@ async function syncServiceStatusAlerts(): Promise<void> {
           acknowledgedBy: null,
           peakLoadPeriod: false,
           runbook: null,
-          labels: {
-            env: service.environment,
-            team: service.team,
-            auto: true,
-            source: "service-registry",
-          },
+          labels: buildAlertLabels(
+            {
+              env: service.environment,
+              team: service.team,
+              auto: true,
+              source: "service-registry",
+            },
+            severity,
+            new Date(),
+          ),
         });
 
         logger.warn(
@@ -307,12 +383,16 @@ async function syncServiceStatusAlerts(): Promise<void> {
               existing.status === "acknowledged" ? existing.status : "firing",
             resolvedAt: null,
             peakLoadPeriod: false,
-            labels: {
-              env: service.environment,
-              team: service.team,
-              auto: true,
-              source: "service-registry",
-            },
+            labels: buildAlertLabels(
+              {
+                env: service.environment,
+                team: service.team,
+                auto: true,
+                source: "service-registry",
+              },
+              severity,
+              existing.firedAt,
+            ),
           })
           .where(eq(alertsTable.id, alertId));
 

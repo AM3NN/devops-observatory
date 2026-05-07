@@ -129,6 +129,7 @@ export default function Alerts() {
           {alertList.map((alert, i) => {
             const conf = severityConfig[alert.severity];
             const Icon = conf.icon;
+            const labels = alert.labels ?? {};
 
             return (
               <motion.div
@@ -173,6 +174,24 @@ export default function Alerts() {
                     <p className="text-sm text-slate-400 line-clamp-2">
                       {alert.description}
                     </p>
+                    {Boolean(
+                      labels.escalationLevel && labels.escalationTeam,
+                    ) && (
+                      <div className="mt-3 flex flex-wrap items-center gap-2 text-[11px] font-mono uppercase tracking-wider text-slate-400">
+                        <span className="rounded-full border border-white/10 bg-background/50 px-2.5 py-1">
+                          Escalation:{" "}
+                          {String(labels.escalationLevel).toUpperCase()}
+                        </span>
+                        <span className="rounded-full border border-white/10 bg-background/50 px-2.5 py-1 text-slate-300">
+                          {String(labels.escalationTeam)}
+                        </span>
+                        {typeof labels.minutesOpen === "number" && (
+                          <span className="rounded-full border border-white/10 bg-background/50 px-2.5 py-1">
+                            {labels.minutesOpen}m open
+                          </span>
+                        )}
+                      </div>
+                    )}
                   </div>
 
                   {/* Actions & Timestamps */}

@@ -204,6 +204,36 @@ export interface TrafficDataPoint {
   responseTime: number;
 }
 
+export type IncidentPredictionLevel =
+  (typeof IncidentPredictionLevel)[keyof typeof IncidentPredictionLevel];
+
+export const IncidentPredictionLevel = {
+  low: "low",
+  medium: "medium",
+  high: "high",
+} as const;
+
+export interface IncidentPredictionSignals {
+  latencyTrendPct: number;
+  errorRateTrendPct: number;
+  cpuUsage: number;
+  memoryUsage: number;
+  sloBurnRate: number;
+  recentErrorLogs: number;
+}
+
+export interface IncidentPrediction {
+  service: string;
+  serviceName: string;
+  score: number;
+  level: IncidentPredictionLevel;
+  horizonMinutes: number;
+  confidence: number;
+  reasons: string[];
+  signals: IncidentPredictionSignals;
+  generatedAt: string;
+}
+
 export type GetLogsParams = {
   level?: GetLogsLevel;
   service?: string;

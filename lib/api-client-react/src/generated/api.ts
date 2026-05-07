@@ -25,6 +25,7 @@ import type {
   GetLogsParams,
   GetTracesParams,
   HealthStatus,
+  IncidentPrediction,
   LogEntry,
   LogsResponse,
   Service,
@@ -937,6 +938,82 @@ export function useGetTrafficData<
   request?: SecondParameter<typeof customFetch>;
 }): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
   const queryOptions = getGetTrafficDataQueryOptions(options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Predict incident risks from recent telemetry trends
+ */
+export const getGetIncidentPredictionsUrl = () => {
+  return `/api/predictions/incidents`;
+};
+
+export const getIncidentPredictions = async (
+  options?: RequestInit,
+): Promise<IncidentPrediction[]> => {
+  return customFetch<IncidentPrediction[]>(getGetIncidentPredictionsUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetIncidentPredictionsQueryKey = () => {
+  return [`/api/predictions/incidents`] as const;
+};
+
+export const getGetIncidentPredictionsQueryOptions = <
+  TData = Awaited<ReturnType<typeof getIncidentPredictions>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getIncidentPredictions>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ?? getGetIncidentPredictionsQueryKey();
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof getIncidentPredictions>>
+  > = ({ signal }) => getIncidentPredictions({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getIncidentPredictions>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetIncidentPredictionsQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getIncidentPredictions>>
+>;
+export type GetIncidentPredictionsQueryError = ErrorType<unknown>;
+
+/**
+ * @summary Predict incident risks from recent telemetry trends
+ */
+
+export function useGetIncidentPredictions<
+  TData = Awaited<ReturnType<typeof getIncidentPredictions>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getIncidentPredictions>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetIncidentPredictionsQueryOptions(options);
 
   const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
     queryKey: QueryKey;

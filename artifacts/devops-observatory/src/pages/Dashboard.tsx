@@ -1,4 +1,8 @@
-import { useDashboardPoll, useTrafficPoll } from "@/hooks/use-dashboard";
+import {
+  useDashboardPoll,
+  useIncidentPredictionsPoll,
+  useTrafficPoll,
+} from "@/hooks/use-dashboard";
 import { useServicesPoll } from "@/hooks/use-services";
 import { useAlertsPoll } from "@/hooks/use-alerts";
 import { useLogsPoll } from "@/hooks/use-logs";
@@ -13,6 +17,7 @@ import {
   RefreshCcw,
   Siren,
   Bug,
+  BrainCircuit,
   type LucideIcon,
 } from "lucide-react";
 import {
@@ -180,6 +185,13 @@ export default function Dashboard() {
     dataUpdatedAt: logsUpdatedAt,
     isFetching: isFetchingLogs,
   } = useLogsPoll({ limit: 100, offset: 0 });
+  const {
+    data: predictions,
+    isError: isPredictionsError,
+    refetch: refetchPredictions,
+    dataUpdatedAt: predictionsUpdatedAt,
+    isFetching: isFetchingPredictions,
+  } = useIncidentPredictionsPoll();
   const trafficSeries = Array.isArray(traffic)
     ? traffic.filter((point): point is TrafficPoint => {
         if (point == null || typeof point !== "object") {
@@ -273,19 +285,24 @@ export default function Dashboard() {
         right.count - left.count || left.service.localeCompare(right.service),
     )
     .slice(0, 5);
+  const topPredictions = Array.isArray(predictions)
+    ? predictions.slice(0, 4)
+    : [];
   const lastRefreshAt = Math.max(
     summaryUpdatedAt,
     trafficUpdatedAt,
     servicesUpdatedAt,
     alertsUpdatedAt,
     logsUpdatedAt,
+    predictionsUpdatedAt,
   );
   const isLiveUpdating =
     isFetchingSummary ||
     isFetchingTraffic ||
     isFetchingServices ||
     isFetchingAlerts ||
-    isFetchingLogs;
+    isFetchingLogs ||
+    isFetchingPredictions;
 
   if (isLoadingSummary || isLoadingTraffic) {
     return (
@@ -609,6 +626,117 @@ export default function Dashboard() {
           )}
         </motion.div>
       </div>
+
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.42 }}
+        className="glass-panel p-6 rounded-2xl"
+      >
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between mb-6">
+          <div>
+            <div className="flex items-center gap-2">
+              <BrainCircuit className="h-5 w-5 text-primary" />
+              <h3 className="text-lg font-bold text-slate-100">
+                AI Incident Prediction
+              </h3>
+            </div>
+            <p className="text-sm text-slate-400 mt-1">
+              Proactive risk score from latency, errors, SLO burn rate, resource
+              usage and recent logs
+            </p>
+          </div>
+          <div className="rounded-full border border-primary/20 bg-primary/10 px-3 py-1 text-xs font-mono uppercase tracking-wider text-primary">
+            30-120 min horizon
+          </div>
+        </div>
+
+        {isPredictionsError ? (
+          <PageState
+            icon={BrainCircuit}
+            title="Predictions unavailable"
+            description="The predictive scoring endpoint could not be loaded."
+            actionLabel="Retry"
+            onAction={() => void refetchPredictions()}
+          />
+        ) : topPredictions.length === 0 ? (
+          <PageState
+            icon={BrainCircuit}
+            title="No prediction data"
+            description="Risk predictions will appear when services start sending telemetry."
+          />
+        ) : (
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            {topPredictions.map((prediction) => {
+              const tone =
+                prediction.level === "high"
+                  ? "border-destructive/20 bg-destructive/10 text-destructive"
+                  : prediction.level === "medium"
+                    ? "border-warning/20 bg-warning/10 text-warning"
+                    : "border-success/20 bg-success/10 text-success";
+
+              return (
+                <div
+                  key={prediction.service}
+                  className="rounded-2xl border border-white/5 bg-background/50 p-4"
+                >
+                  <div className="flex items-start justify-between gap-4 mb-4">
+                    <div className="min-w-0">
+                      <p className="font-semibold text-slate-100 truncate">
+                        {prediction.serviceName}
+                      </p>
+                      <p className="text-xs font-mono uppercase tracking-wider text-slate-500 mt-1">
+                        probable incident in {prediction.horizonMinutes} min
+                      </p>
+                    </div>
+                    <div
+                      className={`rounded-xl border px-3 py-2 text-center ${tone}`}
+                    >
+                      <p className="text-[10px] font-mono uppercase tracking-wider">
+                        {prediction.level}
+                      </p>
+                      <p className="text-2xl font-bold leading-none">
+                        {prediction.score}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="mb-4 h-2 overflow-hidden rounded-full bg-slate-800">
+                    <div
+                      className={
+                        prediction.level === "high"
+                          ? "h-full bg-destructive"
+                          : prediction.level === "medium"
+                            ? "h-full bg-warning"
+                            : "h-full bg-success"
+                      }
+                      style={{ width: `${prediction.score}%` }}
+                    ></div>
+                  </div>
+
+                  <p className="text-sm text-slate-300 leading-6">
+                    {prediction.reasons[0]}
+                  </p>
+                  <div className="mt-4 grid grid-cols-3 gap-2 text-xs font-mono text-slate-300">
+                    <div className="rounded-xl border border-white/5 bg-black/10 px-3 py-2">
+                      <p className="text-slate-500 mb-1">Latency</p>
+                      <p>{prediction.signals.latencyTrendPct}%</p>
+                    </div>
+                    <div className="rounded-xl border border-white/5 bg-black/10 px-3 py-2">
+                      <p className="text-slate-500 mb-1">Errors</p>
+                      <p>{prediction.signals.errorRateTrendPct}%</p>
+                    </div>
+                    <div className="rounded-xl border border-white/5 bg-black/10 px-3 py-2">
+                      <p className="text-slate-500 mb-1">Burn</p>
+                      <p>{prediction.signals.sloBurnRate}x</p>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </motion.div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <motion.div

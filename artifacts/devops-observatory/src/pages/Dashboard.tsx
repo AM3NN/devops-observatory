@@ -1,5 +1,6 @@
 import {
   useDashboardPoll,
+  useIncidentPredictionHistoryPoll,
   useIncidentPredictionsPoll,
   useTrafficPoll,
 } from "@/hooks/use-dashboard";
@@ -38,6 +39,11 @@ type TrafficPoint = {
   requests: number;
   errors: number;
   responseTime: number;
+};
+
+type PredictionHistoryPoint = {
+  time: string;
+  score: number;
 };
 
 type KPICardProps = {
@@ -192,6 +198,11 @@ export default function Dashboard() {
     dataUpdatedAt: predictionsUpdatedAt,
     isFetching: isFetchingPredictions,
   } = useIncidentPredictionsPoll();
+  const {
+    data: predictionHistory,
+    dataUpdatedAt: predictionHistoryUpdatedAt,
+    isFetching: isFetchingPredictionHistory,
+  } = useIncidentPredictionHistoryPoll();
   const trafficSeries = Array.isArray(traffic)
     ? traffic.filter((point): point is TrafficPoint => {
         if (point == null || typeof point !== "object") {
@@ -288,6 +299,24 @@ export default function Dashboard() {
   const topPredictions = Array.isArray(predictions)
     ? predictions.slice(0, 4)
     : [];
+  const predictionTrend = Array.isArray(predictionHistory)
+    ? Object.values(
+        predictionHistory.reduce<Record<string, PredictionHistoryPoint>>(
+          (accumulator, point) => {
+            const date = new Date(point.generatedAt);
+            const key = `${String(date.getHours()).padStart(2, "0")}:${String(date.getMinutes()).padStart(2, "0")}`;
+            const existing = accumulator[key];
+
+            if (!existing || point.score > existing.score) {
+              accumulator[key] = { time: key, score: point.score };
+            }
+
+            return accumulator;
+          },
+          {},
+        ),
+      ).slice(-20)
+    : [];
   const lastRefreshAt = Math.max(
     summaryUpdatedAt,
     trafficUpdatedAt,
@@ -295,6 +324,7 @@ export default function Dashboard() {
     alertsUpdatedAt,
     logsUpdatedAt,
     predictionsUpdatedAt,
+    predictionHistoryUpdatedAt,
   );
   const isLiveUpdating =
     isFetchingSummary ||
@@ -302,7 +332,8 @@ export default function Dashboard() {
     isFetchingServices ||
     isFetchingAlerts ||
     isFetchingLogs ||
-    isFetchingPredictions;
+    isFetchingPredictions ||
+    isFetchingPredictionHistory;
 
   if (isLoadingSummary || isLoadingTraffic) {
     return (
@@ -666,74 +697,134 @@ export default function Dashboard() {
             description="Risk predictions will appear when services start sending telemetry."
           />
         ) : (
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-            {topPredictions.map((prediction) => {
-              const tone =
-                prediction.level === "high"
-                  ? "border-destructive/20 bg-destructive/10 text-destructive"
-                  : prediction.level === "medium"
-                    ? "border-warning/20 bg-warning/10 text-warning"
-                    : "border-success/20 bg-success/10 text-success";
-
-              return (
-                <div
-                  key={prediction.service}
-                  className="rounded-2xl border border-white/5 bg-background/50 p-4"
-                >
-                  <div className="flex items-start justify-between gap-4 mb-4">
-                    <div className="min-w-0">
-                      <p className="font-semibold text-slate-100 truncate">
-                        {prediction.serviceName}
-                      </p>
-                      <p className="text-xs font-mono uppercase tracking-wider text-slate-500 mt-1">
-                        probable incident in {prediction.horizonMinutes} min
-                      </p>
-                    </div>
-                    <div
-                      className={`rounded-xl border px-3 py-2 text-center ${tone}`}
-                    >
-                      <p className="text-[10px] font-mono uppercase tracking-wider">
-                        {prediction.level}
-                      </p>
-                      <p className="text-2xl font-bold leading-none">
-                        {prediction.score}
-                      </p>
-                    </div>
+          <div className="space-y-4">
+            {predictionTrend.length > 1 ? (
+              <div className="rounded-2xl border border-white/5 bg-background/50 p-4">
+                <div className="mb-3 flex items-center justify-between gap-3">
+                  <div>
+                    <p className="text-sm font-semibold text-slate-100">
+                      Risk Evolution
+                    </p>
+                    <p className="text-xs text-slate-500">
+                      Highest predicted service risk over recent snapshots
+                    </p>
                   </div>
-
-                  <div className="mb-4 h-2 overflow-hidden rounded-full bg-slate-800">
-                    <div
-                      className={
-                        prediction.level === "high"
-                          ? "h-full bg-destructive"
-                          : prediction.level === "medium"
-                            ? "h-full bg-warning"
-                            : "h-full bg-success"
-                      }
-                      style={{ width: `${prediction.score}%` }}
-                    ></div>
-                  </div>
-
-                  <p className="text-sm text-slate-300 leading-6">
-                    {prediction.reasons[0]}
-                  </p>
-                  <div className="mt-4 grid grid-cols-3 gap-2 text-xs font-mono text-slate-300">
-                    <div className="rounded-xl border border-white/5 bg-black/10 px-3 py-2">
-                      <p className="text-slate-500 mb-1">Latency</p>
-                      <p>{prediction.signals.latencyTrendPct}%</p>
-                    </div>
-                    <div className="rounded-xl border border-white/5 bg-black/10 px-3 py-2">
-                      <p className="text-slate-500 mb-1">Errors</p>
-                      <p>{prediction.signals.errorRateTrendPct}%</p>
-                    </div>
-                    <div className="rounded-xl border border-white/5 bg-black/10 px-3 py-2">
-                      <p className="text-slate-500 mb-1">Burn</p>
-                      <p>{prediction.signals.sloBurnRate}x</p>
-                    </div>
-                  </div>
+                  <span className="rounded-full border border-white/10 bg-black/10 px-2.5 py-1 text-[10px] font-mono uppercase tracking-wider text-slate-400">
+                    history
+                  </span>
                 </div>
-              );
-            })}
+                <div className="h-40 w-full">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <LineChart
+                      data={predictionTrend}
+                      margin={{ top: 5, right: 8, left: -28, bottom: 0 }}
+                    >
+                      <CartesianGrid
+                        strokeDasharray="3 3"
+                        stroke="rgba(255,255,255,0.05)"
+                        vertical={false}
+                      />
+                      <XAxis
+                        dataKey="time"
+                        stroke="rgba(255,255,255,0.2)"
+                        tick={{ fill: "rgba(255,255,255,0.45)", fontSize: 11 }}
+                        interval="preserveStartEnd"
+                      />
+                      <YAxis
+                        domain={[0, 100]}
+                        stroke="rgba(255,255,255,0.2)"
+                        tick={{ fill: "rgba(255,255,255,0.45)", fontSize: 11 }}
+                      />
+                      <Tooltip
+                        contentStyle={{
+                          backgroundColor: "hsl(var(--card))",
+                          borderColor: "rgba(255,255,255,0.1)",
+                          borderRadius: "8px",
+                        }}
+                      />
+                      <Line
+                        type="monotone"
+                        dataKey="score"
+                        stroke="hsl(var(--primary))"
+                        strokeWidth={2}
+                        dot={false}
+                        activeDot={{ r: 4 }}
+                      />
+                    </LineChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
+            ) : null}
+
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+              {topPredictions.map((prediction) => {
+                const tone =
+                  prediction.level === "high"
+                    ? "border-destructive/20 bg-destructive/10 text-destructive"
+                    : prediction.level === "medium"
+                      ? "border-warning/20 bg-warning/10 text-warning"
+                      : "border-success/20 bg-success/10 text-success";
+
+                return (
+                  <div
+                    key={prediction.service}
+                    className="rounded-2xl border border-white/5 bg-background/50 p-4"
+                  >
+                    <div className="flex items-start justify-between gap-4 mb-4">
+                      <div className="min-w-0">
+                        <p className="font-semibold text-slate-100 truncate">
+                          {prediction.serviceName}
+                        </p>
+                        <p className="text-xs font-mono uppercase tracking-wider text-slate-500 mt-1">
+                          probable incident in {prediction.horizonMinutes} min
+                        </p>
+                      </div>
+                      <div
+                        className={`rounded-xl border px-3 py-2 text-center ${tone}`}
+                      >
+                        <p className="text-[10px] font-mono uppercase tracking-wider">
+                          {prediction.level}
+                        </p>
+                        <p className="text-2xl font-bold leading-none">
+                          {prediction.score}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="mb-4 h-2 overflow-hidden rounded-full bg-slate-800">
+                      <div
+                        className={
+                          prediction.level === "high"
+                            ? "h-full bg-destructive"
+                            : prediction.level === "medium"
+                              ? "h-full bg-warning"
+                              : "h-full bg-success"
+                        }
+                        style={{ width: `${prediction.score}%` }}
+                      ></div>
+                    </div>
+
+                    <p className="text-sm text-slate-300 leading-6">
+                      {prediction.reasons[0]}
+                    </p>
+                    <div className="mt-4 grid grid-cols-3 gap-2 text-xs font-mono text-slate-300">
+                      <div className="rounded-xl border border-white/5 bg-black/10 px-3 py-2">
+                        <p className="text-slate-500 mb-1">Latency</p>
+                        <p>{prediction.signals.latencyTrendPct}%</p>
+                      </div>
+                      <div className="rounded-xl border border-white/5 bg-black/10 px-3 py-2">
+                        <p className="text-slate-500 mb-1">Errors</p>
+                        <p>{prediction.signals.errorRateTrendPct}%</p>
+                      </div>
+                      <div className="rounded-xl border border-white/5 bg-black/10 px-3 py-2">
+                        <p className="text-slate-500 mb-1">Burn</p>
+                        <p>{prediction.signals.sloBurnRate}x</p>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
           </div>
         )}
       </motion.div>

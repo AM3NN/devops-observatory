@@ -2,6 +2,7 @@ import {
   alertsTable,
   apmMetricsTable,
   db,
+  incidentPredictionsTable,
   logsTable,
   servicesTable,
   slosTable,
@@ -26,6 +27,14 @@ export type IncidentPrediction = {
     sloBurnRate: number;
     recentErrorLogs: number;
   };
+  generatedAt: string;
+};
+
+export type IncidentPredictionHistoryPoint = {
+  service: string;
+  serviceName: string;
+  score: number;
+  level: RiskLevel;
   generatedAt: string;
 };
 
@@ -85,7 +94,7 @@ export async function getIncidentPredictions(): Promise<IncidentPrediction[]> {
 
   const generatedAt = now.toISOString();
 
-  return services
+  const predictions = services
     .map((service) => {
       const serviceMetrics = metrics.filter(
         (metric) => metric.service === service.id,
@@ -205,4 +214,54 @@ export async function getIncidentPredictions(): Promise<IncidentPrediction[]> {
         right.score - left.score ||
         left.serviceName.localeCompare(right.serviceName),
     );
+
+  await persistPredictionSnapshot(predictions);
+
+  return predictions;
+}
+
+async function persistPredictionSnapshot(predictions: IncidentPrediction[]) {
+  if (predictions.length === 0) return;
+
+  await db.insert(incidentPredictionsTable).values(
+    predictions.map((prediction) => ({
+      id: `${prediction.service}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+      service: prediction.service,
+      serviceName: prediction.serviceName,
+      score: prediction.score,
+      level: prediction.level,
+      horizonMinutes: prediction.horizonMinutes,
+      confidence: prediction.confidence,
+      reasons: prediction.reasons,
+      signals: prediction.signals,
+      generatedAt: new Date(prediction.generatedAt),
+    })),
+  );
+}
+
+export async function getIncidentPredictionHistory(options?: {
+  service?: string;
+  limit?: number;
+}): Promise<IncidentPredictionHistoryPoint[]> {
+  const limit = clamp(options?.limit ?? 80, 1, 300);
+  const rows = await db
+    .select()
+    .from(incidentPredictionsTable)
+    .where(
+      options?.service
+        ? eq(incidentPredictionsTable.service, options.service)
+        : undefined,
+    )
+    .orderBy(desc(incidentPredictionsTable.generatedAt))
+    .limit(limit);
+
+  return rows
+    .map((row) => ({
+      service: row.service,
+      serviceName: row.serviceName,
+      score: row.score,
+      level: row.level as RiskLevel,
+      generatedAt: row.generatedAt.toISOString(),
+    }))
+    .reverse();
 }

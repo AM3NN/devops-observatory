@@ -1,4 +1,13 @@
-import { pgTable, text, serial, integer, timestamp, real, boolean, jsonb } from "drizzle-orm/pg-core";
+import {
+  pgTable,
+  text,
+  serial,
+  integer,
+  timestamp,
+  real,
+  boolean,
+  jsonb,
+} from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 
@@ -14,12 +23,16 @@ export const servicesTable = pgTable("services", {
   requestsPerMin: real("requests_per_min").notNull(),
   team: text("team").notNull(),
   description: text("description").notNull(),
-  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
 });
 
 export const logsTable = pgTable("logs", {
   id: text("id").primaryKey(),
-  timestamp: timestamp("timestamp", { withTimezone: true }).notNull().defaultNow(),
+  timestamp: timestamp("timestamp", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
   level: text("level").notNull(),
   service: text("service").notNull(),
   message: text("message").notNull(),
@@ -32,7 +45,9 @@ export const logsTable = pgTable("logs", {
 export const apmMetricsTable = pgTable("apm_metrics", {
   id: text("id").primaryKey(),
   service: text("service").notNull(),
-  timestamp: timestamp("timestamp", { withTimezone: true }).notNull().defaultNow(),
+  timestamp: timestamp("timestamp", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
   responseTime: real("response_time").notNull(),
   throughput: real("throughput").notNull(),
   errorRate: real("error_rate").notNull(),
@@ -48,7 +63,9 @@ export const tracesTable = pgTable("traces", {
   operation: text("operation").notNull(),
   duration: real("duration").notNull(),
   status: text("status").notNull(),
-  timestamp: timestamp("timestamp", { withTimezone: true }).notNull().defaultNow(),
+  timestamp: timestamp("timestamp", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
   parentSpanId: text("parent_span_id"),
   tags: jsonb("tags"),
 });
@@ -97,7 +114,24 @@ export const ingestionAgentsTable = pgTable("ingestion_agents", {
   totalLogs: integer("total_logs").notNull().default(0),
   totalMetrics: integer("total_metrics").notNull().default(0),
   totalTraces: integer("total_traces").notNull().default(0),
-  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+});
+
+export const incidentPredictionsTable = pgTable("incident_predictions", {
+  id: text("id").primaryKey(),
+  service: text("service").notNull(),
+  serviceName: text("service_name").notNull(),
+  score: real("score").notNull(),
+  level: text("level").notNull(),
+  horizonMinutes: integer("horizon_minutes").notNull(),
+  confidence: real("confidence").notNull(),
+  reasons: jsonb("reasons").notNull(),
+  signals: jsonb("signals").notNull(),
+  generatedAt: timestamp("generated_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
 });
 
 export const insertLogSchema = createInsertSchema(logsTable);
@@ -109,3 +143,5 @@ export type Slo = typeof slosTable.$inferSelect;
 export type ApmMetric = typeof apmMetricsTable.$inferSelect;
 export type Trace = typeof tracesTable.$inferSelect;
 export type IngestionAgent = typeof ingestionAgentsTable.$inferSelect;
+export type IncidentPredictionRecord =
+  typeof incidentPredictionsTable.$inferSelect;

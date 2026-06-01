@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>PFE Writing Assistant</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <main class="shell">
+      <section class="hero">
+        <div>
+          <p class="eyebrow">Assistant local pour rapport PFE</p>
+          <h1>Réécrire proprement sans changer le sens technique.</h1>
+          <p class="subtitle">
+            Colle un paragraphe, choisis un style, puis récupère une version plus claire,
+            académique ou adaptée à la soutenance.
+          </p>
+        </div>
+        <div class="status-card">
+          <span class="status-dot"></span>
+          <div>
+            <strong id="providerLabel">Chargement...</strong>
+            <p id="modelLabel">Configuration du modèle</p>
+          </div>
+        </div>
+      </section>
+
+      <section class="workspace">
+        <form id="rewriteForm" class="panel input-panel">
+          <div class="panel-header">
+            <div>
+              <p class="eyebrow">Texte source</p>
+              <h2>Ton paragraphe</h2>
+            </div>
+            <select id="language" aria-label="Langue de sortie">
+              <option value="fr">Français</option>
+              <option value="en">English</option>
+            </select>
+          </div>
+
+          <textarea
+            id="sourceText"
+            placeholder="Colle ici une partie de ton rapport PFE..."
+            required
+          ></textarea>
+
+          <div class="mode-grid" role="radiogroup" aria-label="Mode de réécriture">
+            <label class="mode selected">
+              <input type="radio" name="mode" value="academique" checked />
+              <span>Académique</span>
+              <small>Rapport PFE</small>
+            </label>
+            <label class="mode">
+              <input type="radio" name="mode" value="professionnel" />
+              <span>Professionnel</span>
+              <small>Plus mature</small>
+            </label>
+            <label class="mode">
+              <input type="radio" name="mode" value="simple" />
+              <span>Simple</span>
+              <small>Clair et direct</small>
+            </label>
+            <label class="mode">
+              <input type="radio" name="mode" value="soutenance" />
+              <span>Soutenance</span>
+              <small>Version orale</small>
+            </label>
+            <label class="mode">
+              <input type="radio" name="mode" value="resume" />
+              <span>Résumé</span>
+              <small>Idées clés</small>
+            </label>
+          </div>
+
+          <button id="submitButton" type="submit">Réécrire le texte</button>
+          <p class="hint">
+            L'assistant conserve les faits, KPIs, noms de technologies, citations et chiffres.
+          </p>
+        </form>
+
+        <section class="panel output-panel">
+          <div class="panel-header">
+            <div>
+              <p class="eyebrow">Résultat</p>
+              <h2>Version améliorée</h2>
+            </div>
+            <button id="copyButton" class="ghost" type="button">Copier</button>
+          </div>
+          <div id="result" class="result empty">
+            Le texte réécrit apparaîtra ici.
+          </div>
+          <p id="message" class="message"></p>
+        </section>
+      </section>
+    </main>
+
+    <script src="/app.js" type="module"></script>
+  </body>
+</html>

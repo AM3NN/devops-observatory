@@ -14,6 +14,7 @@ DevOps Observatory gives support and platform teams a single place to:
 - review distributed traces
 - manage alerts
 - track SLOs, burn rate, and error budget consumption
+- predict incident risk from recent telemetry trends
 - register and observe external services through an ingestion API
 
 ## Main Features
@@ -23,8 +24,15 @@ DevOps Observatory gives support and platform teams a single place to:
 - **APM & Traces**: response time, throughput, error rate, and distributed trace inspection
 - **Alerts**: alert list with severity/status filters and acknowledge action
 - **SLOs**: SLO status, burn rate, and error budget tracking
+- **AI Incident Prediction**: explainable risk scoring from latency, error rate, SLO burn rate, resource usage, logs, service status, and active alerts
+- **AI Model Evaluation**: model comparison, selected-model rationale, measurable KPIs, and future supervised validation plan
 - **Services**: service registry with health, ownership, and runtime metrics
 - **Ingestion Agents**: register external agents and send logs, metrics, traces, and heartbeats
+
+## Project Documentation
+
+- [Dashboard KPIs and AI Model Selection](docs/kpis-and-ai-model-selection.md): operational KPIs, AI model comparison, and rationale for the selected prediction approach.
+- [AI Model Evaluation Presentation Content](docs/ai-model-evaluation-presentation.md): presentation-ready slides covering model comparison, selected approach, KPIs, and validation roadmap.
 
 ## Architecture
 
@@ -292,6 +300,41 @@ It periodically sends:
 
 This is useful for validating the full live observability flow without relying on demo mode.
 
+## Prometheus and Grafana
+
+The API exposes a Prometheus-compatible scrape endpoint at:
+
+```text
+http://localhost:4000/metrics
+```
+
+It exports platform KPIs such as service health, active alerts, recent log volume, APM latency/error/resource metrics, SLO burn rate, error budget consumption, and AI incident risk score.
+
+To run Prometheus and Grafana locally:
+
+```powershell
+docker compose -f docker-compose.observability.yml up -d
+```
+
+Open:
+
+```text
+Prometheus: http://localhost:9090
+Grafana:    http://localhost:3001
+```
+
+Grafana credentials:
+
+```text
+admin / admin
+```
+
+The compose file provisions:
+
+- Prometheus datasource
+- `DevOps Observatory` dashboard
+- panels for service health, AI risk, latency, SLO error budget, and active alerts
+
 ## Current State
 
 Already implemented:
@@ -302,6 +345,7 @@ Already implemented:
 - APM metric ingestion and charts
 - trace ingestion and inspection
 - alert and SLO views
+- Prometheus `/metrics` endpoint and Grafana dashboard provisioning
 - live telemetry mode support
 - defensive UI states for loading, empty, error, and crash fallback handling
 
@@ -309,7 +353,7 @@ Planned next steps for a more production-like observability platform:
 
 - persistent SLO definitions managed in the database
 - alert escalation workflow
-- deeper ELK / Prometheus / Grafana integration
+- deeper Prometheus alerting rules and Grafana dashboards
 - authentication and RBAC
 - periodic reporting and exports
 

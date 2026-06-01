@@ -25,6 +25,14 @@ export type IncidentPrediction = {
   generatedAt: string;
 };
 
+export type IncidentPredictionHistoryPoint = {
+  service: string;
+  serviceName: string;
+  score: number;
+  level: "low" | "medium" | "high";
+  generatedAt: string;
+};
+
 export function useDashboardPoll() {
   return useGetDashboardSummary({
     query: {
@@ -58,6 +66,31 @@ export function useIncidentPredictionsPoll() {
       }
 
       return (await response.json()) as IncidentPrediction[];
+    },
+    refetchInterval: 30000,
+  });
+}
+
+export function useIncidentPredictionHistoryPoll() {
+  return useQuery({
+    queryKey: ["/api/predictions/incidents/history"],
+    queryFn: async ({ signal }) => {
+      const apiBaseUrl = import.meta.env.VITE_API_BASE_URL?.trim() ?? "";
+      const response = await fetch(
+        `${apiBaseUrl}/api/predictions/incidents/history?limit=120`,
+        {
+          signal,
+          method: "GET",
+        },
+      );
+
+      if (!response.ok) {
+        throw new Error(
+          `Prediction history request failed with ${response.status}`,
+        );
+      }
+
+      return (await response.json()) as IncidentPredictionHistoryPoint[];
     },
     refetchInterval: 30000,
   });

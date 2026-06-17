@@ -36,11 +36,11 @@ jobs:
       - name: Build API (includes frontend)
         run: pnpm --filter @devops-observatory/api-server build
 
-      - name: Zip for deployment
+      - name: Prepare deployment package
         run: |
-          cd artifacts/api-server
-          zip -r ../../api-deploy.zip dist package.json
-          cd ../..
+          pnpm --filter @devops-observatory/api-server deploy --prod /tmp/api-deploy
+          cd /tmp/api-deploy
+          zip -r $GITHUB_WORKSPACE/api-deploy.zip .
 
       - name: Login to Azure
         uses: azure/login@v2

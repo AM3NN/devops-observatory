@@ -38,9 +38,10 @@ jobs:
 
       - name: Prepare deployment package
         run: |
-          pnpm --filter @devops-observatory/api-server deploy --legacy /tmp/api-deploy --frozen-lockfile
-          ls -la /tmp/api-deploy/dist/ | head -5
-          ls -la /tmp/api-deploy/node_modules/@elastic/elasticsearch 2>&1 | head -3
+          mkdir -p /tmp/api-deploy/dist
+          cp -r artifacts/api-server/dist/* /tmp/api-deploy/dist/
+          cp artifacts/api-server/package.json /tmp/api-deploy/
+          cp -r node_modules /tmp/api-deploy/
           cd /tmp/api-deploy
           zip -r $GITHUB_WORKSPACE/api-deploy.zip . -q
 

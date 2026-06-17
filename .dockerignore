@@ -1,0 +1,7 @@
+**/node_modules
+**/dist
+.git
+api_error.log
+web_error.log
+start_api.ps1
+start_web.ps1

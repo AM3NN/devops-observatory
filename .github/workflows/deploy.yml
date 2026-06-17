@@ -38,7 +38,7 @@ jobs:
 
       - name: Prepare deployment package
         run: |
-          pnpm --filter @devops-observatory/api-server deploy --prod /tmp/api-deploy
+          pnpm --filter @devops-observatory/api-server deploy --prod --legacy /tmp/api-deploy
           cd /tmp/api-deploy
           zip -r $GITHUB_WORKSPACE/api-deploy.zip .
 

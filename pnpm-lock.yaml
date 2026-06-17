@@ -187,6 +187,9 @@ importers:
       '@opentelemetry/api':
         specifier: ^1.9.0
         version: 1.9.1
+      apache-arrow:
+        specifier: 21.1.0
+        version: 21.1.0
       cookie-parser:
         specifier: ^1.4.7
         version: 1.4.7

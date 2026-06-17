@@ -55,8 +55,6 @@ async function buildAll() {
       "@swc/*",
       "@aws-sdk/*",
       "@azure/*",
-      "apache-arrow",
-      "apache-arrow/*",
       "@google-cloud/*",
       "@google/*",
       "googleapis",

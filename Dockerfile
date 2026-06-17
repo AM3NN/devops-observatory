@@ -13,4 +13,4 @@ COPY --from=builder /app/artifacts/api-server/dist/ /app/dist/
 COPY --from=builder /app/artifacts/api-server/package.json /app/
 ENV PORT=8080
 EXPOSE 8080
-CMD ["node", "dist/index.mjs"]
+CMD sh -c "node dist/index.mjs 2>/home/startup-error.log; cat /home/startup-error.log; echo 'EXIT:' $?; sleep infinity"

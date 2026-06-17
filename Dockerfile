@@ -11,6 +11,7 @@ FROM node:20-alpine
 WORKDIR /app
 COPY --from=builder /app/artifacts/api-server/dist/ /app/dist/
 COPY --from=builder /app/artifacts/api-server/package.json /app/
+RUN mkdir -p /home/LogFiles
 ENV PORT=8080
 EXPOSE 8080
-CMD node dist/index.mjs 2>/home/LogFiles/app-error.log
+CMD node dist/index.mjs

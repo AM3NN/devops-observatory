@@ -22,7 +22,7 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 24
           cache: "pnpm"
 
       - name: Install dependencies
@@ -38,9 +38,11 @@ jobs:
 
       - name: Prepare deployment package
         run: |
-          pnpm --filter @devops-observatory/api-server deploy --prod --legacy /tmp/api-deploy
+          pnpm --filter @devops-observatory/api-server deploy --legacy /tmp/api-deploy --frozen-lockfile
+          ls -la /tmp/api-deploy/dist/ | head -5
+          ls -la /tmp/api-deploy/node_modules/@elastic/elasticsearch 2>&1 | head -3
           cd /tmp/api-deploy
-          zip -r $GITHUB_WORKSPACE/api-deploy.zip .
+          zip -r $GITHUB_WORKSPACE/api-deploy.zip . -q
 
       - name: Login to Azure
         uses: azure/login@v2

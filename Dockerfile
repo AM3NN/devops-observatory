@@ -5,11 +5,12 @@ COPY pnpm-lock.yaml pnpm-workspace.yaml package.json .npmrc ./
 COPY lib/ lib/
 COPY artifacts/ artifacts/
 RUN pnpm install --frozen-lockfile
+RUN pnpm --filter @devops-observatory/web build
 RUN pnpm --filter @devops-observatory/api-server build
 
 FROM node:20-slim
 WORKDIR /app
-COPY --from=builder /app/artifacts/api-server/dist/ /app/artifacts/api-server/dist/
+COPY --from=builder /app/artifacts/api-server/dist/ /app/dist/
 ENV PORT=8080
 EXPOSE 8080
-CMD ["node", "/app/artifacts/api-server/dist/index.mjs"]
+CMD ["node", "/app/dist/index.mjs"]

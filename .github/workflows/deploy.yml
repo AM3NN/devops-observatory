@@ -26,11 +26,10 @@ jobs:
           node-version: 20
           cache: "pnpm"
 
-      - name: Install dependencies
-        run: pnpm install --no-frozen-lockfile
-
-      - name: Build frontend (outside Docker)
-        run: pnpm --filter @devops-observatory/web build
+      - name: Install and build frontend
+        run: |
+          pnpm install --no-frozen-lockfile
+          pnpm --filter @devops-observatory/web build
         env:
           VITE_API_BASE_URL: ""
 

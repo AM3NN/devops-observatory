@@ -12,6 +12,11 @@ WORKDIR /app
 COPY --from=builder /app/artifacts/api-server/dist/ /app/dist/
 COPY --from=builder /app/node_modules/ /app/node_modules/
 RUN mkdir -p /home/LogFiles
+RUN echo '#!/bin/sh' > /app/start.sh && \
+    echo 'node /app/dist/index.mjs 2>/home/LogFiles/crash.log' >> /app/start.sh && \
+    echo 'cat /home/LogFiles/crash.log' >> /app/start.sh && \
+    echo 'sleep 9999' >> /app/start.sh && \
+    chmod +x /app/start.sh
 ENV PORT=8080
 EXPOSE 8080
-CMD ["node", "/app/dist/index.mjs"]
+CMD ["/app/start.sh"]

@@ -28,6 +28,7 @@ jobs:
         with:
           context: .
           push: true
+          no-cache: true
           tags: ${{ secrets.DOCKER_USERNAME }}/devops-observatory:latest
 
       - name: Login to Azure

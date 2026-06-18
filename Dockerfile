@@ -14,7 +14,4 @@ COPY --from=builder /app/node_modules/ /app/node_modules/
 RUN mkdir -p /home/LogFiles
 ENV PORT=8080
 EXPOSE 8080
-RUN mkdir -p /home/LogFiles
-ENV PORT=8080
-EXPOSE 8080
 CMD ["node", "/app/dist/index.mjs"]

@@ -9,14 +9,7 @@ RUN pnpm --filter @devops-observatory/api-server build
 
 FROM node:20-slim
 WORKDIR /app
-COPY --from=builder /app/artifacts/api-server/dist/ /app/dist/
-COPY --from=builder /app/node_modules/ /app/node_modules/
-RUN mkdir -p /home/LogFiles
-RUN echo '#!/bin/sh' > /app/start.sh && \
-    echo 'node /app/dist/index.mjs 2>/home/LogFiles/crash.log' >> /app/start.sh && \
-    echo 'cat /home/LogFiles/crash.log' >> /app/start.sh && \
-    echo 'sleep 9999' >> /app/start.sh && \
-    chmod +x /app/start.sh
+COPY --from=builder /app/artifacts/api-server/dist/ /app/artifacts/api-server/dist/
 ENV PORT=8080
 EXPOSE 8080
-CMD ["/app/start.sh"]
+CMD ["node", "/app/artifacts/api-server/dist/index.mjs"]

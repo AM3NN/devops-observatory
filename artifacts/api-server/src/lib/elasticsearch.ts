@@ -1,4 +1,3 @@
-import { Client } from "@elastic/elasticsearch";
 import { logger } from "./logger";
 
 const elasticsearchUrl = process.env.ELASTICSEARCH_URL?.trim();
@@ -7,12 +6,20 @@ const elasticsearchApiKey = process.env.ELASTICSEARCH_API_KEY?.trim();
 export const logsIndexName =
   process.env.ELASTICSEARCH_LOGS_INDEX?.trim() || "observatory-logs";
 
-const elasticsearchClient = elasticsearchUrl
-  ? new Client({
+let elasticsearchClient: any = null;
+
+if (elasticsearchUrl) {
+  try {
+    const { Client } = require("@elastic/elasticsearch");
+    elasticsearchClient = new Client({
       node: elasticsearchUrl,
       auth: elasticsearchApiKey ? { apiKey: elasticsearchApiKey } : undefined,
-    })
-  : null;
+    });
+  } catch (error) {
+    logger.warn({ err: error }, "Elasticsearch client not available");
+    elasticsearchClient = null;
+  }
+}
 
 export type IndexedLogDocument = {
   id: string;

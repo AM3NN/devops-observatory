@@ -53,6 +53,7 @@ async function buildAll() {
       "@mikro-orm/*",
       "@grpc/*",
       "@swc/*",
+      "@elastic/*",
       "@aws-sdk/*",
       "@azure/*",
       "@google-cloud/*",

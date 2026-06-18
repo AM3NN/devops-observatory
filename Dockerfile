@@ -5,7 +5,6 @@ COPY pnpm-lock.yaml pnpm-workspace.yaml package.json .npmrc ./
 COPY lib/ lib/
 COPY artifacts/ artifacts/
 RUN pnpm install --frozen-lockfile
-RUN pnpm --filter @devops-observatory/web build
 RUN pnpm --filter @devops-observatory/api-server build
 
 FROM node:20-slim

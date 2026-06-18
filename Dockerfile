@@ -8,7 +8,8 @@ RUN pnpm install --frozen-lockfile
 
 FROM builder AS frontend-builder
 ENV VITE_API_BASE_URL=""
-ENV TAILWIND_DISABLE_OXIDE=true
+RUN cp /app/tsconfig.base.json /app/artifacts/tsconfig.base.json
+RUN cp /app/tsconfig.base.json /app/lib/tsconfig.base.json
 RUN pnpm --filter @devops-observatory/web build
 
 FROM builder AS api-builder

@@ -10,7 +10,6 @@ RUN pnpm --filter @devops-observatory/api-server build
 FROM node:20-slim
 WORKDIR /app
 COPY --from=builder /app/artifacts/api-server/dist/ /app/dist/
-COPY artifacts/devops-observatory/dist/public/ /app/dist/public/
 ENV PORT=8080
 EXPOSE 8080
 CMD ["node", "/app/dist/index.mjs"]

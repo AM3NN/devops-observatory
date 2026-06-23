@@ -42,9 +42,9 @@ jobs:
         run: |
           az webapp config container set \
             --resource-group devops-observatory \
-            --name obs-api \
+            --name obs-api-amen \
             --docker-custom-image-name ${{ secrets.DOCKER_USERNAME }}/devops-observatory:latest \
             --docker-registry-server-url https://index.docker.io \
             --docker-registry-server-user ${{ secrets.DOCKER_USERNAME }} \
             --docker-registry-server-password ${{ secrets.DOCKER_TOKEN }}
-          az webapp restart --resource-group devops-observatory --name obs-api
+          az webapp restart --resource-group devops-observatory --name obs-api-amen

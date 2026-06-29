@@ -30,7 +30,7 @@ interface AlertRule {
   service: string;
   peakLoadPeriod: boolean;
   runbook: string | null;
-  check: () => Promise<{ firing: boolean; value: number }>;
+  check: () => Promise<{ firing: boolean; value: number; service?: string }>;
 }
 
 type EscalationLevel = "n1" | "n2" | "n3" | "management";
@@ -92,6 +92,36 @@ function isPeakHour(): boolean {
 }
 
 const ALERT_RULES: AlertRule[] = [
+  {
+    id: "alert-generic-error",
+    title: "High Error Rate Detected",
+    description: (v) =>
+      `Error rate: ${v.toFixed(1)}% (threshold: 5%) across services`,
+    severity: "critical",
+    service: "any",
+    peakLoadPeriod: true,
+    runbook: null,
+    check: async () => {
+      const since = new Date(Date.now() - 10 * 60_000);
+      const metrics = await db
+        .select()
+        .from(apmMetricsTable)
+        .where(gte(apmMetricsTable.timestamp, since))
+        .orderBy(desc(apmMetricsTable.timestamp))
+        .limit(50);
+      if (metrics.length === 0) return { firing: false, value: 0 };
+      const byService = new Map<string, number[]>();
+      for (const m of metrics) {
+        if (!byService.has(m.service)) byService.set(m.service, []);
+        byService.get(m.service)!.push(m.errorRate);
+      }
+      for (const [service, rates] of byService) {
+        const avg = rates.reduce((a, b) => a + b, 0) / rates.length;
+        if (avg > 5) return { firing: true, value: avg, service };
+      }
+      return { firing: false, value: 0 };
+    },
+  },
   {
     id: "alert-001",
     title: "High API Gateway Latency",
@@ -228,7 +258,8 @@ const ALERT_RULES: AlertRule[] = [
 
 async function evaluateRule(rule: AlertRule): Promise<void> {
   try {
-    const { firing, value } = await rule.check();
+    const { firing, value, service: checkService } = await rule.check();
+    const serviceName = checkService ?? rule.service;
 
     const [existing] = await db
       .select()
@@ -243,7 +274,7 @@ async function evaluateRule(rule: AlertRule): Promise<void> {
         description: rule.description(value),
         severity: rule.severity,
         status: firing ? "firing" : "resolved",
-        service: rule.service,
+        service: serviceName,
         firedAt: firing ? new Date() : new Date(0),
           resolvedAt: firing ? null : new Date(),
           peakLoadPeriod: rule.peakLoadPeriod && isPeakHour(),
@@ -260,7 +291,7 @@ async function evaluateRule(rule: AlertRule): Promise<void> {
     const isCurrentlyFiring = existing.status === "firing";
     const isAcknowledged = existing.status === "acknowledged";
 
-    if (firing && !isCurrentlyFiring && !isAcknowledged) {
+    if (firing && !isCurrentlyFiring) {
       // Transition: resolved → firing
       await db
         .update(alertsTable)

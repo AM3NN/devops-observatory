@@ -28,9 +28,11 @@ async function main() {
   // 2. Start background engines
   if (demoModeEnabled) {
     startTrafficGenerator(); // generates simulated requests every 2 seconds
+    startAlertEngine(); // evaluates alert rules every 30 seconds
+    startSloEngine(); // recomputes SLOs every 2 minutes
+  } else {
+    logger.info("Live mode enabled - demo simulators are disabled");
   }
-  startAlertEngine(); // evaluates alert rules every 30 seconds
-  startSloEngine(); // recomputes SLOs every 2 minutes
 
   // 3. Start HTTP server
   app.listen(port, (err) => {

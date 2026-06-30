@@ -1,6 +1,6 @@
 import { Router, type IRouter } from "express";
 import { db, logsTable } from "@devops-observatory/db";
-import { desc, eq, ilike, and, type SQL } from "drizzle-orm";
+import { desc, eq, ilike, or, and, type SQL } from "drizzle-orm";
 import { GetLogsResponse, IngestLogBody } from "@devops-observatory/api-zod";
 import { randomUUID } from "crypto";
 import { ensureObservedService } from "../lib/service-registry";
@@ -22,7 +22,7 @@ router.get("/logs", async (req, res): Promise<void> => {
 
   if (level) conditions.push(eq(logsTable.level, level));
   if (service) conditions.push(eq(logsTable.service, service));
-  if (search) conditions.push(ilike(logsTable.message, `%${search}%`));
+  if (search) conditions.push(or(ilike(logsTable.message, `%${search}%`), eq(logsTable.id, search)));
 
   const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
   const limitNum = Math.min(parseInt(limit, 10) || 50, 500);

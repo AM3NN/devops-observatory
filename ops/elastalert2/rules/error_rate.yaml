@@ -1,0 +1,11 @@
+name: High Error Rate
+type: frequency
+index: observatory-logs
+num_events: 5
+timeframe:
+  minutes: 5
+filter:
+  - term:
+      level: "ERROR"
+alert:
+  - "debug"

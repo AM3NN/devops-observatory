@@ -10,6 +10,7 @@ services:
       - "9090:9090"
     volumes:
       - ./ops/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./ops/prometheus/alerts.yml:/etc/prometheus/alerts.yml:ro
       - prometheus-data:/prometheus
     extra_hosts:
       - "host.docker.internal:host-gateway"
@@ -29,6 +30,16 @@ services:
       - grafana-data:/var/lib/grafana
       - ./ops/grafana/provisioning:/etc/grafana/provisioning:ro
       - ./ops/grafana/dashboards:/var/lib/grafana/dashboards:ro
+
+  alertmanager:
+    image: prom/alertmanager:v0.27.0
+    container_name: observatory-alertmanager
+    command:
+      - --config.file=/etc/alertmanager/alertmanager.yml
+    ports:
+      - "9093:9093"
+    volumes:
+      - ./ops/alertmanager/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
 
 volumes:
   prometheus-data:

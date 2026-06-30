@@ -124,14 +124,11 @@ export async function searchLogDocuments({
     const query = search
       ? {
           bool: {
-            must: [
-              {
-                multi_match: {
-                  query: search,
-                  fields: ["message", "service", "environment"],
-                },
-              },
+            should: [
+              { multi_match: { query: search, fields: ["message", "service", "environment"] } },
+              { term: { "id.keyword": search } },
             ],
+            minimum_should_match: 1,
             filter: filters,
           },
         }

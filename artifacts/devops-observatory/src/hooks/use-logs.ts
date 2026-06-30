@@ -4,14 +4,13 @@ import {
   getGetLogsQueryKey,
   type GetLogsParams,
 } from "@devops-observatory/api-client-react";
-import { useQueryClient, keepPreviousData } from "@tanstack/react-query";
+import { useQueryClient } from "@tanstack/react-query";
 
 export function useLogsPoll(params?: GetLogsParams) {
   return useGetLogs(params, {
     query: {
       queryKey: getGetLogsQueryKey(params),
       refetchInterval: 15000, // Poll every 15s
-      placeholderData: keepPreviousData,
       select: (data) => {
         if (data == null || typeof data !== "object") {
           return { logs: [], total: 0, offset: 0, limit: 50 };

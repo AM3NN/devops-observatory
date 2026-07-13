@@ -36,7 +36,7 @@ router.get("/logs", async (req, res): Promise<void> => {
     offset: offsetNum,
   });
 
-  if (elasticsearchResult) {
+  if (elasticsearchResult && elasticsearchResult.total > 0) {
     res.json(
       GetLogsResponse.parse({
         logs: elasticsearchResult.logs.map((log) => ({
@@ -90,6 +90,11 @@ router.get("/logs", async (req, res): Promise<void> => {
       limit: limitNum,
     }),
   );
+});
+
+router.delete("/logs", async (_req, res): Promise<void> => {
+  await db.delete(logsTable);
+  res.json({ deleted: true });
 });
 
 router.post("/logs", async (req, res): Promise<void> => {

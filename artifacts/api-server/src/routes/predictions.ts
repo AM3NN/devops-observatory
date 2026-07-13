@@ -3,6 +3,7 @@ import {
   getIncidentPredictionHistory,
   getIncidentPredictions,
 } from "../lib/incident-predictions";
+import { db, incidentPredictionsTable } from "@devops-observatory/db";
 
 const router: IRouter = Router();
 
@@ -27,5 +28,10 @@ router.get(
     res.json(history);
   },
 );
+
+router.delete("/predictions/incidents", async (_req, res): Promise<void> => {
+  await db.delete(incidentPredictionsTable);
+  res.json({ deleted: true });
+});
 
 export default router;

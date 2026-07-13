@@ -1,11 +1,13 @@
 import { useState } from "react";
 import { useLogsPoll } from "@/hooks/use-logs";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   Search,
   Filter,
   Terminal,
   ChevronLeft,
   ChevronRight,
+  Trash2,
 } from "lucide-react";
 import { format } from "date-fns";
 import { motion } from "framer-motion";
@@ -46,6 +48,17 @@ export default function Logs() {
   const logList = Array.isArray(data?.logs) ? data.logs : [];
   const totalLogs = typeof data?.total === "number" ? data.total : 0;
 
+  const queryClient = useQueryClient();
+  const deleteLogs = useMutation({
+    mutationFn: async () => {
+      const res = await fetch("/api/logs", { method: "DELETE" });
+      if (!res.ok) throw new Error("Failed to delete logs");
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/logs"] });
+    },
+  });
+
   if (isError) {
     return (
       <PageState
@@ -63,9 +76,17 @@ export default function Logs() {
     <div className="h-full flex flex-col max-w-7xl mx-auto">
       <div className="flex items-center justify-between mb-6 shrink-0">
         <div>
-          <h2 className="text-2xl font-bold text-slate-100 flex items-center">
-            <Terminal className="w-6 h-6 mr-2 text-primary" />
+          <h2 className="text-2xl font-bold text-slate-100 flex items-center gap-3">
+            <Terminal className="w-6 h-6 text-primary" />
             Centralized Logs
+            <button
+              onClick={() => { if (confirm("Delete ALL logs?")) deleteLogs.mutate(); }}
+              disabled={deleteLogs.isPending}
+              className="ml-2 px-3 py-1 text-xs rounded-lg bg-destructive/20 text-destructive border border-destructive/30 hover:bg-destructive/30 transition-colors disabled:opacity-50"
+            >
+              <Trash2 className="w-3.5 h-3.5 inline mr-1" />
+              {deleteLogs.isPending ? "Deleting..." : "Clear All"}
+            </button>
           </h2>
           <p className="text-sm text-slate-400">
             Search and filter application logs in real-time
@@ -127,6 +148,9 @@ export default function Logs() {
           <table className="w-full text-left text-sm border-collapse">
             <thead className="sticky top-0 bg-card z-10 shadow-[0_4px_10px_rgba(0,0,0,0.5)] border-b border-white/10">
               <tr>
+                  <th className="px-6 py-3 font-semibold text-slate-400 w-44">
+                    Log ID
+                  </th>
                 <th className="px-6 py-3 font-semibold text-slate-400 w-48">
                   Timestamp
                 </th>
@@ -151,6 +175,9 @@ export default function Logs() {
                     key={log.id}
                     className="hover:bg-white/[0.02] transition-colors font-mono cursor-pointer"
                   >
+                    <td className="px-6 py-2 text-slate-400 whitespace-nowrap text-[11px] font-mono cursor-pointer hover:text-primary" title="Click to copy" onClick={() => navigator.clipboard.writeText(log.id)}>
+                      {log.id}
+                    </td>
                     <td className="px-6 py-2 text-slate-400 whitespace-nowrap text-xs">
                       {format(new Date(log.timestamp), "MMM dd, HH:mm:ss.SSS")}
                     </td>

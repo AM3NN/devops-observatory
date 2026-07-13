@@ -61,4 +61,14 @@ router.get("/apm/traces", async (req, res): Promise<void> => {
   );
 });
 
+router.delete("/apm/metrics", async (_req, res): Promise<void> => {
+  await db.delete(apmMetricsTable);
+  res.json({ deleted: true });
+});
+
+router.delete("/apm/traces", async (_req, res): Promise<void> => {
+  await db.delete(tracesTable);
+  res.json({ deleted: true });
+});
+
 export default router;

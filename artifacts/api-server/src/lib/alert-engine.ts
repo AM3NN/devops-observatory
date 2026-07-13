@@ -87,8 +87,7 @@ function buildAlertLabels(
 }
 
 function isPeakHour(): boolean {
-  const h = new Date().getHours();
-  return h >= 8 && h <= 18;
+  return false; // Disabled for live mode demo
 }
 
 const ALERT_RULES: AlertRule[] = [
